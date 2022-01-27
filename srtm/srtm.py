@@ -27,7 +27,6 @@ import json
 import logging
 import os
 import shutil
-from io import BytesIO
 from typing import List
 
 import geopandas as gpd
@@ -37,7 +36,6 @@ from appdirs import user_cache_dir
 from bs4 import BeautifulSoup
 from shapely.geometry import Polygon, shape
 from shapely.geometry.base import BaseGeometry
-
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
