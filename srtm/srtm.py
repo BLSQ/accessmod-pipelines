@@ -37,8 +37,10 @@ import rasterio.merge
 import requests
 from appdirs import user_cache_dir
 from bs4 import BeautifulSoup
+from requests.adapters import HTTPAdapter
 from shapely.geometry import Polygon, shape
 from shapely.geometry.base import BaseGeometry
+from urllib3.util import Retry
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
@@ -126,7 +128,7 @@ def country_geometry(country_code: str, use_cache=True) -> Polygon:
 class SRTM:
     """Search and download SRTM data."""
 
-    def __init__(self, timeout=60):
+    def __init__(self, timeout=30):
         """Initialize SRTM catalog."""
         self.LPDAAC_DOWNLOAD_URL = (
             "https://e4ftl01.cr.usgs.gov/MEASURES/SRTMGL1.003/2000.02.11/"
@@ -134,8 +136,19 @@ class SRTM:
         self.EARTHDATA_URL = "https://urs.earthdata.nasa.gov"
         self.EARTHDATA_LOGIN_URL = "https://urs.earthdata.nasa.gov/login"
         self.EARTHDATA_PROFILE_URL = "https://urs.earthdata.nasa.gov/profile"
-        self.timeout = timeout
+
+        retry_adapter = HTTPAdapter(
+            max_retries=Retry(
+                total=3,
+                status_forcelist=[429, 500, 502, 503, 504],
+                method_whitelist=["HEAD", "GET"],
+            )
+        )
+
         self._session = requests.Session()
+        self._session.mount("https://", retry_adapter)
+        self._session.mount("http://", retry_adapter)
+        self._timeout = timeout
 
     @property
     def _token(self) -> str:
@@ -145,7 +158,7 @@ class SRTM:
         token : str
             Authenticity token.
         """
-        r = self._session.get(self.EARTHDATA_URL, timeout=self.timeout)
+        r = self._session.get(self.EARTHDATA_URL, timeout=self._timeout)
         r.raise_for_status()
         soup = BeautifulSoup(r.text, "html.parser")
         token = ""
@@ -175,7 +188,7 @@ class SRTM:
                 "password": password,
                 "authenticity_token": self._token,
             },
-            timeout=self.timeout,
+            timeout=self._timeout,
         )
         r.raise_for_status()
         logger.debug(f"EarthData: Logged in as {username}.")
@@ -248,7 +261,7 @@ class SRTM:
             logger.debug(f"Found SRTM tile in cache at {fp_cache}.")
             return fp
 
-        with self._session.get(url, stream=True, timeout=self.timeout) as r:
+        with self._session.get(url, stream=True, timeout=self._timeout) as r:
 
             try:
                 r.raise_for_status()
