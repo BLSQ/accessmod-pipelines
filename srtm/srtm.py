@@ -57,6 +57,15 @@ def to_iso_a2(iso_a3):
     return countries[countries["ISO-A3"] == iso_a3]["ISO-A2"].values[0]
 
 
+def _human_readable_size(size, decimals=1):
+    """Transform size in bytes into human readable text."""
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
+        if size < 1000:
+            break
+        size /= 1000
+    return f"{size:.{decimals}f} {unit}"
+
+
 def country_geometry(country_code: str, use_cache=True) -> Polygon:
     """Get country geometry from Eurostat.
 
@@ -262,8 +271,13 @@ class SRTM:
                         f.write(chunk)
             logger.debug(f"Downloaded SRTM tile from {url} to {fp}.")
 
-            if os.path.getsize(fp) != int(size):
-                raise SRTMError(f"Size of {fp} is invalid.")
+            size_local = os.path.getsize(fp)
+            if size_local != int(size):
+                raise SRTMError(
+                    f"Size of {fp} is invalid "
+                    f"(expected {_human_readable_size(int(size), decimals=3)}, "
+                    f"got {_human_readable_size(size_local, decimals=3)})."
+                )
 
             if use_cache:
                 os.makedirs(os.path.dirname(fp_cache), exist_ok=True)
