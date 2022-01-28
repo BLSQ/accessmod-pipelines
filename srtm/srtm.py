@@ -262,7 +262,7 @@ class SRTM:
                         f.write(chunk)
             logger.debug(f"Downloaded SRTM tile from {url} to {fp}.")
 
-            if os.path.getsize(fp) != size:
+            if os.path.getsize(fp) != int(size):
                 raise SRTMError(f"Size of {fp} is invalid.")
 
             if use_cache:
