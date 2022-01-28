@@ -27,10 +27,13 @@ import json
 import logging
 import os
 import shutil
+import zipfile
 from typing import List
 
 import geopandas as gpd
 import pandas as pd
+import rasterio
+import rasterio.merge
 import requests
 from appdirs import user_cache_dir
 from bs4 import BeautifulSoup
@@ -285,3 +288,122 @@ class SRTM:
                 logger.debug(f"Cached SRTM tile to {fp_cache}.")
 
         return fp
+
+
+def unzip(
+    src: str, dst_dir: str = None, remove_archive: bool = False, overwrite: bool = False
+) -> List[str]:
+    """Extract a zip archive.
+
+    Parameters
+    ----------
+    src : str
+        Path to zip archive.
+    dst_dir : str, optional
+        Destination directory (same as zip archive by default).
+    remove_archive : bool, optional
+        Remove source archive after decompression
+        (default=False).
+    overwrite : bool, optional
+        Overwrite existing files (default=False).
+
+    Return
+    ------
+    list of str
+        List of extracted files.
+    """
+    if not dst_dir:
+        dst_dir = os.path.dirname(src)
+
+    with zipfile.ZipFile(src, "r") as z:
+        filenames = z.namelist()
+        fp = os.path.join(dst_dir, filenames[0])
+        if os.path.isfile(fp) and not overwrite:
+            logger.debug(f"File {fp} already exists.")
+        else:
+            z.extractall(dst_dir)
+            logger.debug(f"Extracted zip archive {src} to {dst_dir}.")
+
+    if remove_archive:
+        os.remove(src)
+        logger.debug(f"Removed old zip archive {src}.")
+
+    return [os.path.join(dst_dir, fn) for fn in filenames]
+
+
+def _flatten(src_list: list) -> list:
+    """Flatten a list of lists."""
+    return [item for sublist in src_list for item in sublist]
+
+
+def unzip_all(src_dir, dst_dir: str = None, remove_archive: bool = False) -> str:
+    """Unzip all zip archives in a directory.
+
+    Parameters
+    ----------
+    src_dir : str
+        Source directory containing the zip archives.
+    dst_dir : str, optional
+        Target directory where archives are extracted to.
+        Equals to source directory by default.
+
+    Return
+    ------
+    list of str
+        List of extracted files.
+    """
+    if not dst_dir:
+        dst_dir = src_dir
+
+    filenames = []
+    for fn in os.listdir(src_dir):
+        if fn.lower().endswith(".zip"):
+            fp = os.path.join(src_dir, fn)
+            filenames.append(unzip(fp, dst_dir))
+
+    return _flatten(filenames)
+
+
+def merge_tiles(tiles: List[str], dst_file: str, overwrite: bool = False):
+    """Merge SRTM tiles into a single mosaic.
+
+    Parameters
+    ----------
+    tiles : list of str
+        Paths to SRTM tiles.
+    dst_file : str
+        Path to output geotiff.
+    overwrite : bool, optional
+        Overwrite existing files.
+
+    Return
+    ------
+    dst_file : str
+        Path to output geotiff.
+    """
+    if os.path.isfile(dst_file) and not overwrite:
+        logger.debug(f"File {dst_file} already exists.")
+        return dst_file
+
+    with rasterio.open(tiles[0]) as src:
+        meta = src.meta.copy()
+
+    mosaic, dst_transform = rasterio.merge.merge(tiles)
+    meta.update(
+        {
+            "driver": "GTiff",
+            "tiled": True,
+            "blockxsize": 256,
+            "blockysize": 256,
+            "compress": "zstd",
+            "predictor": 2,
+            "num_threads": "all_cpus",
+            "transform": dst_transform,
+        }
+    )
+
+    with rasterio.open(dst_file, "w", **meta) as dst:
+        dst.write(mosaic)
+    logger.debug(f"Merged {len(tiles)} tiles into mosaic {dst_file}.")
+
+    return dst_file
