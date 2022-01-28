@@ -57,7 +57,7 @@ def to_iso_a2(iso_a3):
     return countries[countries["ISO-A3"] == iso_a3]["ISO-A2"].values[0]
 
 
-def country_geometry(country_code: str) -> Polygon:
+def country_geometry(country_code: str, use_cache=True) -> Polygon:
     """Get country geometry from Eurostat.
 
     See <https://ec.europa.eu/eurostat/web/gisco/geodata/reference-data
@@ -67,6 +67,8 @@ def country_geometry(country_code: str) -> Polygon:
     ----------
     country_code : str
         ISO-A2 or ISO-A3 country code.
+    use_cache : bool, optional
+        Use cache if possible (default=True).
 
     Return
     ------
@@ -90,7 +92,7 @@ def country_geometry(country_code: str) -> Polygon:
     # do not make a request to the Eurostat API if the country geometry
     # has already been downloaded.
     fp_cache = os.path.join(user_cache_dir("accessmod"), "countries", fname)
-    if os.path.isfile(fp_cache):
+    if os.path.isfile(fp_cache) and use_cache:
         logger.debug(f"Loading {country_code} geometry {fp_cache} from cache")
         with open(fp_cache) as f:
             geojson = json.load(f)
@@ -100,8 +102,11 @@ def country_geometry(country_code: str) -> Polygon:
     with requests.get(url) as r:
         logger.debug(f"Downloading {country_code} geometry from {url}")
         geojson = r.json()
-        with open(fp_cache, "w") as f:
-            json.dump(geojson, f)
+
+        if use_cache:
+            with open(fp_cache, "w") as f:
+                json.dump(geojson, f)
+
         return shape(geojson["features"][0]["geometry"])
 
 
@@ -194,7 +199,9 @@ class SRTM:
         )
         return [self.LPDAAC_DOWNLOAD_URL + tile for tile in tiles["dataFile"].values]
 
-    def download(self, url: str, output_dir: str, overwrite: bool = False) -> str:
+    def download(
+        self, url: str, output_dir: str, overwrite: bool = False, use_cache: bool = True
+    ) -> str:
         """Download a SRTM tile.
 
         Parameters
@@ -205,6 +212,8 @@ class SRTM:
             Path to output directory.
         overwrite : bool, optional
             Overwrite existing files (default=False).
+        use_cache : bool, optional
+            Use cache version if possible (default=True).
 
         Return
         ------
@@ -221,7 +230,7 @@ class SRTM:
             logger.debug(f"File {fp} already exists.")
             return fp
 
-        if os.path.isfile(fp_cache) and not overwrite:
+        if os.path.isfile(fp_cache) and not overwrite and use_cache:
             logger.debug(f"Found SRTM tile in cache at {fp_cache}.")
             shutil.copyfile(fp_cache, fp)
             return fp
@@ -253,5 +262,9 @@ class SRTM:
 
             if os.path.getsize(fp) != size:
                 raise SRTMError(f"Size of {fp} is invalid.")
+
+            if use_cache:
+                os.makedirs(os.path.dirname(fp_cache), exist_ok=True)
+                shutil.copyfile(fp, fp_cache)
 
         return fp
