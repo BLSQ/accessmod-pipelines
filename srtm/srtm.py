@@ -93,19 +93,20 @@ def country_geometry(country_code: str, use_cache=True) -> Polygon:
     # has already been downloaded.
     fp_cache = os.path.join(user_cache_dir("accessmod"), "countries", fname)
     if os.path.isfile(fp_cache) and use_cache:
-        logger.debug(f"Loading {country_code} geometry {fp_cache} from cache")
         with open(fp_cache) as f:
             geojson = json.load(f)
+            logger.debug(f"Loaded {country_code} geometry from cache {fp_cache}.")
             return shape(geojson["features"][0]["geometry"])
 
     os.makedirs(os.path.dirname(fp_cache), exist_ok=True)
     with requests.get(url) as r:
-        logger.debug(f"Downloading {country_code} geometry from {url}")
         geojson = r.json()
+        logger.debug(f"Downloaded {country_code} geometry from {url}")
 
         if use_cache:
             with open(fp_cache, "w") as f:
                 json.dump(geojson, f)
+            logger.debug(f"Written {country_code} geometry to cache at {fp_cache}.")
 
         return shape(geojson["features"][0]["geometry"])
 
@@ -231,8 +232,8 @@ class SRTM:
             return fp
 
         if os.path.isfile(fp_cache) and not overwrite and use_cache:
-            logger.debug(f"Found SRTM tile in cache at {fp_cache}.")
             shutil.copyfile(fp_cache, fp)
+            logger.debug(f"Found SRTM tile in cache at {fp_cache}.")
             return fp
 
         with self._session.get(url, stream=True, timeout=self.timeout) as r:
@@ -259,6 +260,7 @@ class SRTM:
                 for chunk in r.iter_content(chunk_size=1024):
                     if chunk:
                         f.write(chunk)
+            logger.debug(f"Downloaded SRTM tile from {url} to {fp}.")
 
             if os.path.getsize(fp) != size:
                 raise SRTMError(f"Size of {fp} is invalid.")
@@ -266,5 +268,6 @@ class SRTM:
             if use_cache:
                 os.makedirs(os.path.dirname(fp_cache), exist_ok=True)
                 shutil.copyfile(fp, fp_cache)
+                logger.debug(f"Cached SRTM tile to {fp_cache}.")
 
         return fp
