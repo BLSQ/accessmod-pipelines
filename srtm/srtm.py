@@ -250,7 +250,7 @@ class SRTM:
                 raise requests.exceptions.ConnectionError(
                     f"Cannot get size from URL {url}."
                 )
-            if size < 1024:
+            if int(size) < 1024:
                 raise requests.exceptions.ConnectionError(
                     f"File at {url} appears to be empty."
                 )
