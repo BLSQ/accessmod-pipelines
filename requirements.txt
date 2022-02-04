@@ -20,7 +20,7 @@ certifi==2021.10.8
     #   pyproj
     #   rasterio
     #   requests
-charset-normalizer==2.0.10
+charset-normalizer==2.0.11
     # via requests
 click==8.0.3
     # via
@@ -38,13 +38,15 @@ cligj==0.7.2
     #   rasterio
 fiona==1.8.20
     # via geopandas
+gdal==3.4.1
+    # via -r requirements.in
 geopandas==0.10.2
     # via -r requirements.in
 idna==3.3
     # via requests
 munch==2.5.0
     # via fiona
-numpy==1.22.1
+numpy==1.22.2
     # via
     #   pandas
     #   rasterio
