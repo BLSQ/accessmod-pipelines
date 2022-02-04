@@ -43,7 +43,7 @@ from utils import _human_readable_size
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
-    level=logging.DEBUG,
+    level=logging.INFO,
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
@@ -64,6 +64,8 @@ class SRTM:
         self.EARTHDATA_URL = "https://urs.earthdata.nasa.gov"
         self.EARTHDATA_LOGIN_URL = "https://urs.earthdata.nasa.gov/login"
         self.EARTHDATA_PROFILE_URL = "https://urs.earthdata.nasa.gov/profile"
+
+        self.bounding_boxes = self.get_bounding_boxes()
 
         retry_adapter = HTTPAdapter(
             max_retries=Retry(
@@ -119,10 +121,9 @@ class SRTM:
             timeout=self._timeout,
         )
         r.raise_for_status()
-        logger.debug(f"EarthData: Logged in as {username}.")
+        logger.info(f"EarthData: Logged in as {username}.")
 
-    @property
-    def bounding_boxes(self):
+    def get_bounding_boxes(self):
         """Bounding boxes of SRTM tiles."""
         return gpd.read_file(
             os.path.join(
@@ -148,7 +149,7 @@ class SRTM:
         tiles = self.bounding_boxes[self.bounding_boxes.intersects(geom)]
         if tiles.empty:
             raise ValueError("No SRTM tile found for the area of interest.")
-        logger.debug(
+        logger.info(
             f"{len(tiles)} SRTM tiles are required to cover the area of interest."
         )
         return [self.LPDAAC_DOWNLOAD_URL + tile for tile in tiles["dataFile"].values]
@@ -181,12 +182,12 @@ class SRTM:
         fp_cache = os.path.join(user_cache_dir("accessmod"), "srtm", "tiles", fname)
 
         if os.path.isfile(fp) and not overwrite:
-            logger.debug(f"File {fp} already exists.")
+            logger.info(f"File {fp} already exists.")
             return fp
 
         if os.path.isfile(fp_cache) and not overwrite and use_cache:
             shutil.copyfile(fp_cache, fp)
-            logger.debug(f"Found SRTM tile in cache at {fp_cache}.")
+            logger.info(f"Found SRTM tile in cache at {fp_cache}.")
             return fp
 
         with self._session.get(url, stream=True, timeout=self._timeout) as r:
@@ -213,7 +214,7 @@ class SRTM:
                 for chunk in r.iter_content(chunk_size=1024):
                     if chunk:
                         f.write(chunk)
-            logger.debug(f"Downloaded SRTM tile from {url} to {fp}.")
+            logger.info(f"Downloaded SRTM tile from {url} to {fp}.")
 
             size_local = os.path.getsize(fp)
             if size_local != int(size):
@@ -226,7 +227,7 @@ class SRTM:
             if use_cache:
                 os.makedirs(os.path.dirname(fp_cache), exist_ok=True)
                 shutil.copyfile(fp, fp_cache)
-                logger.debug(f"Cached SRTM tile to {fp_cache}.")
+                logger.info(f"Cached SRTM tile to {fp_cache}.")
 
         return fp
 
@@ -249,7 +250,7 @@ def merge_tiles(tiles: List[str], dst_file: str, overwrite: bool = False):
         Path to output geotiff.
     """
     if os.path.isfile(dst_file) and not overwrite:
-        logger.debug(f"File {dst_file} already exists.")
+        logger.info(f"File {dst_file} already exists.")
         return dst_file
 
     with rasterio.open(tiles[0]) as src:
@@ -261,7 +262,7 @@ def merge_tiles(tiles: List[str], dst_file: str, overwrite: bool = False):
 
     with rasterio.open(dst_file, "w", **meta) as dst:
         dst.write(mosaic)
-    logger.debug(f"Merged {len(tiles)} tiles into mosaic {dst_file}.")
+    logger.info(f"Merged {len(tiles)} tiles into mosaic {dst_file}.")
 
     return dst_file
 
@@ -293,7 +294,7 @@ def compute_slope(dem: str, dst_file: str, overwrite: bool = False) -> str:
         scale = 111120
 
     if os.path.isfile(dst_file) and not overwrite:
-        logger.debug(f"File {dst_file} already exists.")
+        logger.info(f"File {dst_file} already exists.")
         return dst_file
 
     options = gdal.DEMProcessingOptions(
@@ -303,5 +304,5 @@ def compute_slope(dem: str, dst_file: str, overwrite: bool = False) -> str:
         creationOptions=GDAL_CREATION_OPTIONS,
     )
     gdal.DEMProcessing(dst_file, dem, "slope", options=options)
-    logger.debug(f"Computed slope {dst_file} from DEM {dem}.")
+    logger.info(f"Computed slope {dst_file} from DEM {dem}.")
     return dst_file
