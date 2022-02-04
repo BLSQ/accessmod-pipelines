@@ -258,7 +258,7 @@ def merge_tiles(tiles: List[str], dst_file: str, overwrite: bool = False):
 
     mosaic, dst_transform = rasterio.merge.merge(tiles)
     meta.update(RASTERIO_DEFAULT_PROFILE)
-    meta.update(transform=dst_transform)
+    meta.update(transform=dst_transform, height=mosaic.shape[0], width=mosaic.shape[1])
 
     with rasterio.open(dst_file, "w", **meta) as dst:
         dst.write(mosaic)
