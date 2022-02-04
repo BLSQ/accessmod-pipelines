@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 def to_iso_a2(iso_a3):
     """Convert ISO-A3 country code to ISO-A2."""
-    countries = pd.read_csv("countries.csv")
+    countries = pd.read_csv(os.path.join(os.path.dirname(__file__), "countries.csv"))
     if iso_a3 not in countries["ISO-A3"].values:
         raise ValueError(f"Country code {iso_a3} is not a valid ISO-A3 code.")
     return countries[countries["ISO-A3"] == iso_a3]["ISO-A2"].values[0]
