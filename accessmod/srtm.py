@@ -26,20 +26,24 @@ References
 import logging
 import os
 import shutil
+import tempfile
 from typing import List
 
+import click
 import geopandas as gpd
+import processing
 import rasterio
 import rasterio.merge
 import requests
+import utils
 from appdirs import user_cache_dir
 from bs4 import BeautifulSoup
 from osgeo import gdal
 from processing import GDAL_CREATION_OPTIONS, RASTERIO_DEFAULT_PROFILE
+from rasterio.crs import CRS
 from requests.adapters import HTTPAdapter
 from shapely.geometry.base import BaseGeometry
 from urllib3.util import Retry
-from utils import _human_readable_size
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
@@ -220,8 +224,8 @@ class SRTM:
             if size_local != int(size):
                 raise SRTMError(
                     f"Size of {fp} is invalid "
-                    f"(expected {_human_readable_size(int(size), decimals=3)}, "
-                    f"got {_human_readable_size(size_local, decimals=3)})."
+                    f"(expected {utils._human_readable_size(int(size), decimals=3)}, "
+                    f"got {utils._human_readable_size(size_local, decimals=3)})."
                 )
 
             if use_cache:
@@ -306,3 +310,116 @@ def compute_slope(dem: str, dst_file: str, overwrite: bool = False) -> str:
     gdal.DEMProcessing(dst_file, dem, "slope", options=options)
     logger.info(f"Computed slope {dst_file} from DEM {dem}.")
     return dst_file
+
+
+@click.group()
+def cli():
+    pass
+
+
+@cli.command()
+@click.option("--country", type=str, required=True, help="country code")
+@click.option(
+    "--username",
+    type=str,
+    required=True,
+    envvar="EARTHDATA_USERNAME",
+    help="earthdata username",
+)
+@click.option(
+    "--password",
+    type=str,
+    required=True,
+    envvar="EARTHDATA_PASSWORD",
+    help="earthdata password",
+)
+@click.option("--output-dir", type=str, required=True, help="output directory")
+@click.option(
+    "--overwrite", is_flag=True, default=False, help="overwrite existing files"
+)
+def download(
+    country: str,
+    username: str,
+    password: str,
+    output_dir: str,
+    overwrite: bool,
+):
+    """Download SRTM tiles."""
+    geom = utils.country_geometry(country)
+    catalog = SRTM()
+    catalog.login(username, password)
+    tiles = catalog.find(geom)
+    for tile in tiles:
+        catalog.download(tile, output_dir, overwrite=overwrite, use_cache=True)
+
+
+@cli.command()
+@click.option("--country", type=str, required=True, help="country code")
+@click.option("--epsg", type=int, required=True, help="target epsg code")
+@click.option("--resolution", type=int, required=True, help="spatial resolution (m)")
+@click.option("--input-dir", type=str, required=True, help="input directory")
+@click.option("--output-dir", type=str, required=True, help="output directory")
+@click.option(
+    "--overwrite", is_flag=True, default=False, help="overwrite existing files"
+)
+def process(
+    country: str,
+    epsg: int,
+    resolution: float,
+    input_dir: str,
+    output_dir: str,
+    overwrite: bool,
+):
+    """Process SRTM tiles.
+
+    Tiles are merged into a single mosaic, reprojected and masked according to
+    the area of interest. In addition, a slope raster (in degrees) is computed.
+    Raster grid is created from country, epsg and spatial resolution parameters.
+    """
+    dst_dem = os.path.join(output_dir, "dem.tif")
+    dst_slope = os.path.join(output_dir, "slope.tif")
+
+    # get raster metadata from country boundaries, spatial resolution and EPSG
+    geom = utils.country_geometry(country)
+    dst_crs = CRS.from_epsg(int(epsg))
+    _, shape, bounds = processing.create_grid(
+        geom=geom, dst_crs=dst_crs, dst_res=resolution
+    )
+
+    for fp, label in zip((dst_dem, dst_slope), ("DEM", "Slope")):
+        if os.path.isfile(fp):
+            if overwrite:
+                os.remove(fp)
+                logger.info(f"Deleted old {label} file at {fp}.")
+            else:
+                return FileExistsError(f"{label} already exists at {fp}.")
+
+    with tempfile.TemporaryDirectory(prefix="AccessMod_") as tmp_dir:
+
+        tiles = utils.unzip_all(input_dir, tmp_dir)
+        if len(tiles) == 0:
+            return FileNotFoundError(f"No SRTM tile found at {input_dir}.")
+
+        mosaic = merge_tiles(
+            tiles, os.path.join(tmp_dir, "mosaic.tif"), overwrite=overwrite
+        )
+
+        # slope is computed from DEM before reprojection and masking
+        slope = compute_slope(
+            mosaic, os.path.join(tmp_dir, "slope.tif"), overwrite=overwrite
+        )
+
+        for src_fp, dst_fp in zip((mosaic, slope), (dst_dem, dst_slope)):
+
+            tmp_fp = src_fp.replace(".tif", "_reproj.tif")
+            tmp_fp = processing.reproject(
+                src_fp,
+                tmp_fp,
+                dst_crs=dst_crs,
+                dtype="int16",
+                bounds=bounds,
+                height=shape[0],
+                width=shape[1],
+                resampling_alg="bilinear",
+            )
+            processing.mask(tmp_fp, dst_fp, geom)
