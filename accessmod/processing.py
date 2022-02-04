@@ -160,8 +160,8 @@ def reproject(
         return ValueError(f"Resampling algorithm {resampling_alg} is not supported.")
 
     gdal.Warp(
-        src_raster,
         dst_raster,
+        src_raster,
         dstSRS=dst_crs.to_string(),
         outputType=GDAL_DTYPES[dtype],
         format="GTiff",
