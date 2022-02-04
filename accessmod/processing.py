@@ -224,3 +224,4 @@ def mask(src_raster: str, dst_raster: str, geom: Polygon, src_crs: CRS = None):
         gdal.Warp(dst_raster, src_raster, options=options)
 
     logger.info(f"Clipped raster {src_raster}.")
+    return dst_raster
