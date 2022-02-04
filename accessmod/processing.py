@@ -198,6 +198,7 @@ def mask(src_raster: str, dst_raster: str, geom: Polygon, src_crs: CRS = None):
     str
         Path to output raster.
     """
+    geom = geom.__geo_interface__
     # Reproject input geometry to same CRS as raster if needed
     with rasterio.open(src_raster) as src:
         dst_crs = src.crs
@@ -212,7 +213,7 @@ def mask(src_raster: str, dst_raster: str, geom: Polygon, src_crs: CRS = None):
 
         geom_fp = os.path.join(tmp_dir, "geom.geojson")
         with open(geom_fp, "w") as f:
-            json.dump(geom.__geo_interface__, f)
+            json.dump(geom, f)
 
         options = gdal.WarpOptions(
             cutlineDSName=geom_fp,
