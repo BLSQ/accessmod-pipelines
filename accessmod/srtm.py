@@ -423,3 +423,7 @@ def process(
                 resampling_alg="bilinear",
             )
             processing.mask(tmp_fp, dst_fp, geom)
+
+
+if __name__ == "__main__":
+    cli()

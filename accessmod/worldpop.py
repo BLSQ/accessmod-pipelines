@@ -205,3 +205,7 @@ def download(
         timeout=30,
         overwrite=overwrite,
     )
+
+
+if __name__ == "__main__":
+    cli()
