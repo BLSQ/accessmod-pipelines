@@ -22,7 +22,7 @@ PERIOD_UNCONSTRAINED = (2000, 2020)
 
 def build_url(
     country: str, year: int = 2020, un_adj: bool = True, constrained: bool = True
-):
+) -> str:
     """Build download URL.
 
     Parameters
@@ -62,7 +62,7 @@ def download_raster(
     resolution: int = 100,
     timeout: int = 30,
     overwrite: bool = False,
-):
+) -> str:
     """Download a WorldPop population dataset.
 
     Four types of datasets are supported:
