@@ -75,7 +75,7 @@ class SRTM:
             max_retries=Retry(
                 total=3,
                 status_forcelist=[429, 500, 502, 503, 504],
-                method_whitelist=["HEAD", "GET"],
+                allowed_methods=["HEAD", "GET"],
             )
         )
 
