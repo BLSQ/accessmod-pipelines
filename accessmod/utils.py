@@ -25,6 +25,14 @@ def to_iso_a2(iso_a3):
     return countries[countries["ISO-A3"] == iso_a3]["ISO-A2"].values[0]
 
 
+def country_is_valid(country_code: str) -> bool:
+    """Check validitity of country ISO A3 code."""
+    if len(country_code) != 3:
+        return False
+    countries = pd.read_csv(os.path.join(os.path.dirname(__file__), "countries.csv"))
+    return country_code.upper() in countries["ISO-A3"].values
+
+
 def country_geometry(country_code: str, use_cache=True) -> Polygon:
     """Get country geometry from Eurostat.
 
