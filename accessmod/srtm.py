@@ -378,6 +378,7 @@ def process(
     """
     dst_dem = os.path.join(output_dir, "dem.tif")
     dst_slope = os.path.join(output_dir, "slope.tif")
+    os.makedirs(output_dir, exist_ok=True)
 
     # get raster metadata from country boundaries, spatial resolution and EPSG
     geom = utils.country_geometry(country)
