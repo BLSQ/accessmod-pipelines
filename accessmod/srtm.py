@@ -393,7 +393,7 @@ def process(
                 os.remove(fp)
                 logger.info(f"Deleted old {label} file at {fp}.")
             else:
-                return FileExistsError(f"{label} already exists at {fp}.")
+                raise FileExistsError(f"{label} already exists at {fp}.")
 
     with tempfile.TemporaryDirectory(prefix="AccessMod_") as tmp_dir:
 
