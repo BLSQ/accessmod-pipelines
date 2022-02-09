@@ -104,7 +104,6 @@ def download_raster(
             total=3,
             status_forcelist=[429, 500, 502, 503, 504],
             allowed_methods=["HEAD", "GET"],
-            # method_whitelist=["HEAD", "GET"],
         )
     )
 
