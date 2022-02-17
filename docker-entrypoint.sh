@@ -9,6 +9,7 @@ show_help() {
   Available commands:
 
   srtm             : start srtm subsystem
+  worldpop         : start worldpop subsystem
   python           : run arbitrary python code
   bash             : launch bash session
   test             : launch tests using Pytest
@@ -20,6 +21,9 @@ show_help() {
 case "$command" in
 "srtm")
   python -m srtm $arguments
+  ;;
+"worldpop")
+  python -m worldpop $arguments
   ;;
 "test")
   pytest -s $arguments
