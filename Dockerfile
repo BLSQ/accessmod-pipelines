@@ -2,7 +2,8 @@ FROM ubuntu:jammy-20220130
 
 LABEL maintainer="yforget@bluesquarehub.com"
 
-RUN apt-get update && apt-get install -y \
+RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC\
+  apt-get update && apt-get install -y \
     gdal-bin \
     proj-bin \
     grass-core \
