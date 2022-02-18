@@ -1,4 +1,4 @@
-FROM ubuntu:jammy-20220130
+FROM python:3.9.7
 
 LABEL maintainer="yforget@bluesquarehub.com"
 
