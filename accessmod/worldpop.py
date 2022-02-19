@@ -5,13 +5,13 @@ from time import monotonic
 import click
 import requests
 import utils
-from requests.adapters import HTTPAdapter
-from urllib3.util import Retry
 from fsspec import AbstractFileSystem
 from fsspec.implementations.http import HTTPFileSystem
 from fsspec.implementations.local import LocalFileSystem
 from gcsfs import GCSFileSystem
+from requests.adapters import HTTPAdapter
 from s3fs import S3FileSystem
+from urllib3.util import Retry
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
@@ -28,7 +28,6 @@ PERIOD_UNCONSTRAINED = (2000, 2020)
 
 def filesystem(target_path: str) -> AbstractFileSystem:
     """Guess filesystem based on path"""
-
     client_kwargs = {}
     if "://" in target_path:
         target_protocol = target_path.split("://")[0]
