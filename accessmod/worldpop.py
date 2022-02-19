@@ -1,11 +1,17 @@
 import logging
 import os
+from time import monotonic
 
 import click
 import requests
 import utils
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
+from fsspec import AbstractFileSystem
+from fsspec.implementations.http import HTTPFileSystem
+from fsspec.implementations.local import LocalFileSystem
+from gcsfs import GCSFileSystem
+from s3fs import S3FileSystem
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
@@ -18,6 +24,27 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://data.worldpop.org/GIS/Population/Global_2000_2020"
 PERIOD_CONSTRAINED = (2020, 2020)
 PERIOD_UNCONSTRAINED = (2000, 2020)
+
+
+def filesystem(target_path: str) -> AbstractFileSystem:
+    """Guess filesystem based on path"""
+
+    client_kwargs = {}
+    if "://" in target_path:
+        target_protocol = target_path.split("://")[0]
+        if target_protocol == "s3":
+            fs_class = S3FileSystem
+            client_kwargs = {"endpoint_url": os.environ.get("AWS_S3_ENDPOINT")}
+        elif target_protocol == "gcs":
+            fs_class = GCSFileSystem
+        elif target_protocol == "http" or target_protocol == "https":
+            fs_class = HTTPFileSystem
+        else:
+            raise ValueError(f"Protocol {target_protocol} not supported.")
+    else:
+        fs_class = LocalFileSystem
+
+    return fs_class(client_kwargs=client_kwargs)
 
 
 def build_url(
@@ -114,21 +141,24 @@ def download_raster(
     url = build_url(country=country, year=year, un_adj=un_adj, constrained=constrained)
     logger.info(f"WorldPop URL: {url}.")
 
-    os.makedirs(output_dir, exist_ok=True)
     fp = os.path.join(output_dir, url.split("/")[-1])
-    if os.path.isfile(fp) and not overwrite:
+    fs = filesystem(fp)
+    fs.makedirs(output_dir, exist_ok=True)
+    if fs.exists(fp) and not overwrite:
         raise FileExistsError(f"File {fp} already exists.")
 
+    tmp_name = "/tmp/wp_" + str(monotonic()).replace(".", "")
     with s.get(url, stream=True, timeout=timeout) as r:
         r.raise_for_status()
-        size_http = int(r.headers.get("content-length"))
-        with open(fp, "wb") as f:
+        size_http = int(r.headers.get("content-length", 0))
+        with open(tmp_name, "wb") as f:
             for chunk in r.iter_content(chunk_size=1024 * 1024):
                 if chunk:
                     f.write(chunk)
+    fs.put(tmp_name, fp)
     logger.info(f"Downloaded WorldPop data into {fp}.")
 
-    size_local = os.path.getsize(fp)
+    size_local = fs.size(fp)
     if size_local != size_http:
         raise IOError(
             f"Remote ({utils._human_readable_size(size_http)}) and "
