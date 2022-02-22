@@ -6,3 +6,4 @@ shapely
 beautifulsoup4
 rasterio
 gdal
+fsspec

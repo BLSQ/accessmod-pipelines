@@ -38,6 +38,8 @@ cligj==0.7.2
     #   rasterio
 fiona==1.8.20
     # via geopandas
+fsspec==2022.2.0
+    # via -r requirements.in
 gdal==3.2.2
     # via -r requirements.in
 geopandas==0.10.2
