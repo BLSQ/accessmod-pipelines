@@ -501,3 +501,138 @@ def isotropic_costdistance(
     logger.info(f"Exported catchment areas raster to {nearest_fp}.")
 
     return cost_fp, nearest_fp
+
+
+def anisotropic_costdistance(
+    src_friction: str,
+    src_targets: str,
+    src_dem: str,
+    dst_dir: str,
+    knight_move: bool = True,
+    max_cost: float = 0,
+    walk_coeff: Tuple[float] = (0.72, 6.0, 1.9998, -1.9998),
+    lambda_: float = 1.0,
+    slope_factor: float = -0.2125,
+    overwrite: bool = False,
+):
+    """Anisotropic cost distance analysis.
+
+    Based on r.walk GRASS GIS module, see
+    <https://grass.osgeo.org/grass78/manuals/r.walk.html>.
+
+    Parameters
+    ----------
+    src_friction : str
+        Path to friction surface raster.
+    src_targets : str
+        Path to destination points layer.
+    src_dem : str
+        Path to digital elevation model.
+    dst_dir : str
+        Output directory.
+    knight_move : bool, optional
+        Use the "Knight's move" (default=True).
+        See r.cost documentation for more info.
+    max_cost : float, optional
+        Max cumulative cost (default=0).
+    walk_coeff : tuple of float, optional
+        Coefficients for walking energy formula parameters a,b,c,d
+        (default=(0.72, 6.0, 1.9998, -1.9998)).
+    lambda_ : float, optional
+        Lambda coefficients for combining walking energy and friction
+        cost (default=1.0).
+    slope_factor : float, optional
+        Slope factor determines travel energy cost per height step
+        (default=-0.2125).
+    overwrite : bool, optional
+        Overwrite existing files (default=False).
+
+    Return
+    ------
+    str
+        Path to cumulative cost raster.
+    str
+        Path to catchment areas raster.
+    """
+    grass_datadir = os.path.join(
+        user_cache_dir(appname=APP_NAME, appauthor=APP_AUTHOR),
+        f"grassdata_{utils.random_string(16)}",
+    )
+    os.makedirs(grass_datadir, exist_ok=True)
+    logger.debug(f"GRASS data directory: {grass_datadir}.")
+
+    fs = utils.filesystem(src_friction)
+    tmp_friction = os.path.join(grass_datadir, os.path.basename(src_friction))
+    fs.get(src_friction, tmp_friction)
+    logger.debug(f"Local copy from {src_friction} to {tmp_friction}.")
+
+    fs = utils.filesystem(src_dem)
+    tmp_dem = os.path.join(grass_datadir, os.path.basename(src_dem))
+    fs.get(src_dem, tmp_dem)
+    logger.debug(f"Local copy from {src_dem} to {tmp_dem}.")
+
+    fs = utils.filesystem(src_targets)
+    tmp_targets = os.path.join(grass_datadir, os.path.basename(src_targets))
+    fs.get(src_targets, tmp_targets)
+    logger.debug(f"Local copy from {src_targets} to {tmp_targets}.")
+
+    with rasterio.open(tmp_friction) as src:
+        src_crs = src.crs
+
+    grasshelper.setup_environment(grass_datadir, src_crs)
+    grasshelper.grass_execute("r.in.gdal", input=tmp_friction, output="friction")
+    grasshelper.grass_execute("r.in.gdal", input=tmp_dem, output="dem")
+    grasshelper.grass_execute("g.region", raster="friction")
+    grasshelper.grass_execute("v.in.ogr", input=tmp_targets, output="targets")
+
+    grasshelper.grass_execute(
+        "r.walk",
+        flags=f'{"k" if knight_move else ""}n',
+        elevation="dem",
+        friction="friction",
+        output="cost",
+        nearest="nearest",
+        outdir="backlink",
+        start_points="targets",
+    )
+    logger.info("Finished cost distance analysis.")
+
+    fs = utils.filesystem(dst_dir)
+    fs.makedirs(dst_dir, exist_ok=True)
+
+    cost_fp = os.path.join(dst_dir, "cumulative_cost.tif")
+    tmp = os.path.join(grass_datadir, os.path.basename(cost_fp))
+    if fs.exists(cost_fp) and not overwrite:
+        raise FileExistsError(f"File {cost_fp} already exists.")
+    grasshelper.grass_execute(
+        "r.out.gdal",
+        flags="f",
+        input="cost",
+        output=tmp,
+        format="GTiff",
+        nodata=-1,
+        type="Float32",
+        createopt="COMPRESS=ZSTD,PREDICTOR=2",
+        overwrite=overwrite,
+    )
+    fs.put(tmp, cost_fp)
+    logger.info(f"Exported cumulative cost raster to {cost_fp}.")
+
+    nearest_fp = os.path.join(dst_dir, "catchment_areas.tif")
+    tmp = os.path.join(grass_datadir, os.path.basename(nearest_fp))
+    if fs.exists(nearest_fp) and not overwrite:
+        raise FileExistsError(f"File {nearest_fp} already exists.")
+    grasshelper.grass_execute(
+        "r.out.gdal",
+        input="nearest",
+        output=tmp,
+        format="GTiff",
+        nodata=65535,
+        type="UInt16",
+        createopt="COMPRESS=ZSTD,PREDICTOR=2",
+        overwrite=overwrite,
+    )
+    fs.put(tmp, nearest_fp)
+    logger.info(f"Exported catchment areas raster to {nearest_fp}.")
+
+    return cost_fp, nearest_fp
