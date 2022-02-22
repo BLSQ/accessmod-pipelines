@@ -18,7 +18,13 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-COPY processing.py utils.py srtm.py srtm30m_bounding_boxes.json worldpop.py /app/
+COPY docker-entrypoint.sh \
+  accessmod/processing.py \
+  accessmod/utils.py \
+  accessmod/srtm.py \
+  accessmod/srtm30m_bounding_boxes.json \
+  accessmod/worldpop.py \
+  /app/
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["srtm"]
