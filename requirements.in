@@ -7,3 +7,5 @@ beautifulsoup4
 rasterio
 gdal
 fsspec
+s3fs
+gcsfs
