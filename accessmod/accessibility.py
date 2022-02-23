@@ -32,6 +32,7 @@ APP_AUTHOR = "Bluesquare"
 @click.option("--output-dir", type=str, required=True, help="output data directory")
 @click.option("--dem", type=str, help="digital elevation model")
 @click.option("--slope", type=str, help="slope raster")
+@click.option("--max-slope", type=float, help="max passable slope in percents")
 @click.option("--landcover", type=str, help="land cover raster")
 @click.option("--transport", type=str, help="transport network layer")
 @click.option("--barrier", type=str, help="barrier layer")
@@ -64,6 +65,7 @@ def accessibility(
     output_dir: str,
     dem: str,
     slope: str,
+    max_slope: float,
     landcover: str,
     transport: str,
     barrier: str,
@@ -111,6 +113,8 @@ def accessibility(
         src_transport=transport,
         src_transport_speeds=transport_speeds,
         src_transport_column=category_column,
+        src_slope=slope,
+        max_slope=max_slope,
         src_water_vector=water,
         src_water_all_touched=water_all_touched,
         src_barrier=[barrier],
@@ -368,6 +372,8 @@ def friction_surface(
     src_transport: str = None,
     src_transport_speeds: dict = None,
     src_transport_column: str = None,
+    src_slope: str = None,
+    max_slope: float = None,
     src_water_vector: str = None,
     src_water_raster: str = None,
     src_water_all_touched: bool = True,
@@ -401,6 +407,10 @@ def friction_surface(
         are ignored.
     src_transport_column : str, optional
         Column in src_transport with category information.
+    src_slope : str, optional
+        Path to input slope raster. Required if max_slope is set.
+    max_slope : float, optional
+        Max. passable slope value in percents (default=None).
     src_water_vector : str, optional
         Path to input vector file with water bodies and rivers.
         All features are considered as impassable surface water.
@@ -442,6 +452,10 @@ def friction_surface(
             all_touched=src_water_all_touched,
         )
         off_road[water] = 0
+
+    if src_slope and max_slope:
+        slope = slope_mask(src_slope, max_slope)
+        off_road[slope] = 0
 
     speed = off_road
 
