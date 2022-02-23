@@ -450,8 +450,6 @@ def friction_surface(
     if fs.exists(dst_file) and not overwrite:
         raise FileExistsError(f"File {dst_file} already exists.")
 
-    print(src_landcover)
-    print(src_landcover_speeds)
     off_road = speed_from_raster(src_landcover, src_landcover_speeds)
 
     if src_water_raster or src_water_vector:
