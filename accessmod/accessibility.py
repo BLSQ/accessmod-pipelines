@@ -58,6 +58,10 @@ APP_AUTHOR = "Bluesquare"
     help="use knight's move in cost distance analysis",
 )
 @click.option(
+    "--invert-direction", is_flag=True, help="compute travel times from target"
+)
+@click.option("--max-travel-time", type=int, help="max travel time in minutes")
+@click.option(
     "--overwrite", is_flag=True, default=False, help="overwrite existing files"
 )
 @click.argument("target")
@@ -78,6 +82,8 @@ def accessibility(
     category_column: str,
     algorithm: str,
     knight_move: bool,
+    invert_direction: bool,
+    max_travel_time: int,
     overwrite: bool,
 ):
     """Perform an accessibility analysis."""
