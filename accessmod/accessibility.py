@@ -483,7 +483,7 @@ def friction_surface(
     if src_barrier:
         speed = apply_barriers(
             src_speed=speed,
-            barrier=src_barrier,
+            barriers=[src_barrier],
             dst_crs=dst_crs,
             dst_shape=dst_shape,
             dst_transform=dst_transform,
