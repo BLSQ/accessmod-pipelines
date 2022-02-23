@@ -102,9 +102,10 @@ def accessibility(
         scenario_table = pd.read_csv(scenario)
         # temporary hack to divide the scenario table into two separate
         # dicts (one for land cover and one for transport network)
-        class_is_int = scenario_table["class"].apply(lambda cls: isinstance(cls, int))
+        scenario_table["class"] = scenario_table["class"].astype(str)
+        class_is_int = scenario_table["class"].apply(lambda cls: cls.isnumeric())
         landcover_speeds = {
-            row["class"]: row["speed"]
+            int(row["class"]): row["speed"]
             for _, row in scenario_table[class_is_int].iterrows()
         }
         transport_speeds = {
@@ -449,6 +450,8 @@ def friction_surface(
     if fs.exists(dst_file) and not overwrite:
         raise FileExistsError(f"File {dst_file} already exists.")
 
+    print(src_landcover)
+    print(src_landcover_speeds)
     off_road = speed_from_raster(src_landcover, src_landcover_speeds)
 
     if src_water_raster or src_water_vector:
