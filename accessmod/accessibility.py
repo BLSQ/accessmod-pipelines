@@ -35,14 +35,15 @@ APP_AUTHOR = "Bluesquare"
 @click.option("--max-slope", type=float, help="max passable slope in percents")
 @click.option("--landcover", type=str, help="land cover raster")
 @click.option("--transport", type=str, help="transport network layer")
+@click.option("--priority-roads", is_flag=True, help="roads have priority over water")
+@click.option(
+    "--priority-landcover",
+    type=str,
+    help="land cover classes with priority over water",
+)
 @click.option("--barrier", type=str, help="barrier layer")
 @click.option("--water", type=str, help="water layer")
-@click.option(
-    "--water-all-touched/--not-water-all-touched",
-    is_flag=True,
-    default=True,
-    help="rasterize all pixels touched by geometries",
-)
+@click.option("--water-all-touched", is_flag=True, help="mask all cells touching water")
 @click.option("--scenario", type=str, help="path to scenario table")
 @click.option("--category-column", type=str, help="category column in transport layer")
 @click.option(
@@ -68,6 +69,8 @@ def accessibility(
     max_slope: float,
     landcover: str,
     transport: str,
+    priority_roads: bool,
+    priority_landcover: str,
     barrier: str,
     water: str,
     water_all_touched: bool,
