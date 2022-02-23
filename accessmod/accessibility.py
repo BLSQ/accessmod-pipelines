@@ -126,7 +126,7 @@ def accessibility(
         max_slope=max_slope,
         src_water_vector=water,
         src_water_all_touched=water_all_touched,
-        src_barrier=[barrier],
+        src_barrier=[barrier] if barrier else None,
         unit_meters=algorithm == "anisotropic",
         overwrite=overwrite,
     )
@@ -483,7 +483,7 @@ def friction_surface(
     if src_barrier:
         speed = apply_barriers(
             src_speed=speed,
-            barriers=[src_barrier],
+            barriers=src_barrier,
             dst_crs=dst_crs,
             dst_shape=dst_shape,
             dst_transform=dst_transform,
