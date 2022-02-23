@@ -4,6 +4,7 @@ import logging
 import os
 from typing import List, Tuple
 
+import click
 import geopandas as gpd
 import grasshelper
 import numpy as np
@@ -25,6 +26,105 @@ logger = logging.getLogger(__name__)
 
 APP_NAME = "AccessMod"
 APP_AUTHOR = "Bluesquare"
+
+
+@click.command()
+@click.option("--output-dir", type=str, required=True, help="output data directory")
+@click.option("--dem", type=str, help="digital elevation model")
+@click.option("--slope", type=str, help="slope raster")
+@click.option("--landcover", type=str, help="land cover raster")
+@click.option("--transport", type=str, help="transport network layer")
+@click.option("--barrier", type=str, help="barrier layer")
+@click.option("--water", type=str, help="water layer")
+@click.option(
+    "--water-all-touched/--not-water-all-touched",
+    is_flag=True,
+    default=True,
+    help="rasterize all pixels touched by geometries",
+)
+@click.option("--scenario", type=str, help="path to scenario table")
+@click.option("--category-column", type=str, help="category column in transport layer")
+@click.option(
+    "--algorithm",
+    type=click.Choice(["isotropic", "anisotropic"], case_sensitive=False),
+    help="cost distance algorithm",
+)
+@click.option(
+    "--knight-move",
+    is_flag=True,
+    default=False,
+    help="use knight's move in cost distance analysis",
+)
+@click.option(
+    "--overwrite", is_flag=True, default=False, help="overwrite existing files"
+)
+@click.argument("target")
+def accessibility(
+    target: str,
+    output_dir: str,
+    dem: str,
+    slope: str,
+    landcover: str,
+    transport: str,
+    barrier: str,
+    water: str,
+    water_all_touched: bool,
+    scenario: str,
+    category_column: str,
+    algorithm: str,
+    knight_move: bool,
+    overwrite: bool,
+):
+    """Perform an accessibility analysis."""
+    fs = utils.filesystem(output_dir)
+    fs.makedirs(output_dir, exist_ok=True)
+
+    fs = utils.filesystem(dem)
+    with fs.open(dem) as f:
+        with rasterio.open(f) as src:
+            dst_crs = src.crs
+            dst_shape = src.shape
+            dst_transform = src.transform
+
+    fs = utils.filesystem(scenario)
+    with fs.open(scenario) as f:
+        scenario_table = pd.read_csv(scenario)
+        # temporary hack to divide the scenario table into two separate
+        # dicts (one for land cover and one for transport network)
+        class_is_int = scenario_table["class"].apply(lambda cls: isinstance(cls, int))
+        landcover_speeds = {
+            row["class"]: row["speed"]
+            for _, row in scenario_table[class_is_int].iterrows()
+        }
+        transport_speeds = {
+            row["class"]: row["speed"]
+            for _, row in scenario_table[~class_is_int].iterrows()
+        }
+
+    friction = friction_surface(
+        dst_file=os.path.join(output_dir, "friction_surface.tif"),
+        src_landcover=landcover,
+        src_landcover_speeds=landcover_speeds,
+        dst_crs=dst_crs,
+        dst_shape=dst_shape,
+        dst_transform=dst_transform,
+        src_transport=transport,
+        src_transport_speeds=transport_speeds,
+        src_transport_column=category_column,
+        src_water_vector=water,
+        src_water_all_touched=water_all_touched,
+        src_barrier=[barrier],
+        unit_meters=algorithm == "anisotropic",
+        overwrite=overwrite,
+    )
+
+    cost, catchment = isotropic_costdistance(
+        src_friction=friction,
+        src_targets=target,
+        dst_dir=output_dir,
+        knight_move=knight_move,
+        overwrite=overwrite,
+    )
 
 
 def speed_from_raster(src_raster: str, moving_speeds: dict) -> np.ndarray:
@@ -636,3 +736,7 @@ def anisotropic_costdistance(
     logger.info(f"Exported catchment areas raster to {nearest_fp}.")
 
     return cost_fp, nearest_fp
+
+
+if __name__ == "__main__":
+    accessibility()
