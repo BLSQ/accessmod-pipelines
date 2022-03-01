@@ -5,7 +5,7 @@ appdirs
 shapely
 beautifulsoup4
 rasterio
-gdal==3.2.2
+gdal==3.0.4
 pytest
 responses
 s3fs==2022.01.0
