@@ -18,7 +18,16 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-COPY processing.py utils.py srtm.py srtm30m_bounding_boxes.json worldpop.py accessibility.py grasshelper.py /app/
+COPY docker-entrypoint.sh \
+  processing.py \
+  utils.py \
+  srtm.py \
+  srtm30m_bounding_boxes.json \
+  worldpop.py \
+  countries.csv \
+  accessibility.py \
+  grasshelper.py \
+  /app/
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["srtm"]
