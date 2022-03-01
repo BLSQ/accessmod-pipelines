@@ -4,6 +4,7 @@ import os
 import tempfile
 from typing import Tuple
 
+import geopandas as gpd
 import rasterio
 from osgeo import gdal
 from rasterio.crs import CRS
@@ -225,3 +226,30 @@ def mask(src_raster: str, dst_raster: str, geom: Polygon, src_crs: CRS = None):
 
     logger.info(f"Clipped raster {src_raster}.")
     return dst_raster
+
+
+def enforce_crs(geodataframe: gpd.GeoDataFrame, crs: CRS) -> gpd.GeoDataFrame:
+    """Enforce a given CRS on a geodataframe.
+
+    If the geodataframe does not have any CRS assigned, it is assumed
+    to be in WGS84.
+
+    Parameters
+    ----------
+    geodataframe : geodataframe
+        Input geopandas geodataframe.
+    crs : pyproj CRS
+        Target CRS.
+
+    Return
+    ------
+    geodataframe
+        Projected geodataframe.
+    """
+    if not geodataframe.crs:
+        geodataframe.crs = CRS.from_epsg(4326)
+        logger.debug("Geodataframe did not have any CRS assigned.")
+    if geodataframe.crs != crs:
+        geodataframe.to_crs(crs, inplace=True)
+        logger.debug("Reprojected geodataframe.")
+    return geodataframe

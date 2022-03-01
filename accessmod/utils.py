@@ -1,12 +1,19 @@
 import json
 import logging
 import os
+import random
+import string
 import zipfile
 from typing import List
 
 import pandas as pd
 import requests
 from appdirs import user_cache_dir
+from fsspec import AbstractFileSystem
+from fsspec.implementations.http import HTTPFileSystem
+from fsspec.implementations.local import LocalFileSystem
+from gcsfs import GCSFileSystem
+from s3fs import S3FileSystem
 from shapely.geometry import Polygon, shape
 
 logging.basicConfig(
@@ -168,3 +175,28 @@ def _human_readable_size(size, decimals=1):
             break
         size /= 1000
     return f"{size:.{decimals}f} {unit}"
+
+
+def filesystem(target_path: str) -> AbstractFileSystem:
+    """Guess filesystem based on path"""
+    client_kwargs = {}
+    if "://" in target_path:
+        target_protocol = target_path.split("://")[0]
+        if target_protocol == "s3":
+            fs_class = S3FileSystem
+            client_kwargs = {"endpoint_url": os.environ.get("AWS_S3_ENDPOINT")}
+        elif target_protocol == "gcs":
+            fs_class = GCSFileSystem
+        elif target_protocol == "http" or target_protocol == "https":
+            fs_class = HTTPFileSystem
+        else:
+            raise ValueError(f"Protocol {target_protocol} not supported.")
+    else:
+        fs_class = LocalFileSystem
+
+    return fs_class(client_kwargs=client_kwargs)
+
+
+def random_string(length=16):
+    chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
+    return "".join(random.choice(chars) for i in range(length))

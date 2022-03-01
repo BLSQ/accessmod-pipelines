@@ -25,6 +25,8 @@ COPY docker-entrypoint.sh \
   srtm30m_bounding_boxes.json \
   worldpop.py \
   countries.csv \
+  accessibility.py \
+  grasshelper.py \
   /app/
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
