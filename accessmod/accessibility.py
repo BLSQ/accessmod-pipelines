@@ -33,19 +33,24 @@ APP_AUTHOR = "Bluesquare"
 @click.option("--dem", type=str, help="digital elevation model")
 @click.option("--slope", type=str, help="slope raster")
 @click.option("--max-slope", type=float, help="max passable slope in percents")
-@click.option("--landcover", type=str, help="land cover raster")
-@click.option("--transport", type=str, help="transport network layer")
+@click.option("--land-cover", type=str, help="land cover raster")
+@click.option("--transport-network", type=str, help="transport network layer")
 @click.option("--priority-roads", is_flag=True, help="roads have priority over water")
 @click.option(
-    "--priority-landcover",
+    "--priority-land-cover",
     type=str,
     help="land cover classes with priority over water",
 )
 @click.option("--barrier", type=str, help="barrier layer")
 @click.option("--water", type=str, help="water layer")
 @click.option("--water-all-touched", is_flag=True, help="mask all cells touching water")
-@click.option("--scenario", type=str, help="path to scenario table")
-@click.option("--category-column", type=str, help="category column in transport layer")
+@click.option("--moving-speeds", type=str, help="path to scenario table")
+@click.option(
+    "--category-column",
+    type=str,
+    default="highway",
+    help="category column in transport layer",
+)
 @click.option(
     "--algorithm",
     type=click.Choice(["isotropic", "anisotropic"], case_sensitive=False),
@@ -64,21 +69,21 @@ APP_AUTHOR = "Bluesquare"
 @click.option(
     "--overwrite", is_flag=True, default=False, help="overwrite existing files"
 )
-@click.argument("target")
+@click.argument("health-facilities")
 def accessibility(
-    target: str,
+    health_facilities: str,
     output_dir: str,
     dem: str,
     slope: str,
     max_slope: float,
-    landcover: str,
-    transport: str,
+    land_cover: str,
+    transport_network: str,
     priority_roads: bool,
-    priority_landcover: str,
+    priority_land_cover: str,
     barrier: str,
     water: str,
     water_all_touched: bool,
-    scenario: str,
+    moving_speeds: str,
     category_column: str,
     algorithm: str,
     knight_move: bool,
@@ -97,9 +102,9 @@ def accessibility(
             dst_shape = src.shape
             dst_transform = src.transform
 
-    fs = utils.filesystem(scenario)
-    with fs.open(scenario) as f:
-        scenario_table = pd.read_csv(scenario)
+    fs = utils.filesystem(moving_speeds)
+    with fs.open(moving_speeds) as f:
+        scenario_table = pd.read_csv(moving_speeds)
         # temporary hack to divide the scenario table into two separate
         # dicts (one for land cover and one for transport network)
         scenario_table["class"] = scenario_table["class"].astype(str)
@@ -115,12 +120,12 @@ def accessibility(
 
     friction = friction_surface(
         dst_file=os.path.join(output_dir, "friction_surface.tif"),
-        src_landcover=landcover,
+        src_landcover=land_cover,
         src_landcover_speeds=landcover_speeds,
         dst_crs=dst_crs,
         dst_shape=dst_shape,
         dst_transform=dst_transform,
-        src_transport=transport,
+        src_transport=transport_network,
         src_transport_speeds=transport_speeds,
         src_transport_column=category_column,
         src_slope=slope,
@@ -134,7 +139,7 @@ def accessibility(
 
     cost, catchment = isotropic_costdistance(
         src_friction=friction,
-        src_targets=target,
+        src_targets=health_facilities,
         dst_dir=output_dir,
         knight_move=knight_move,
         overwrite=overwrite,
