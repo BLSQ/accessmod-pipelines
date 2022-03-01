@@ -22,19 +22,19 @@ show_help() {
 
 case "$command" in
 "srtm")
-  python -m srtm $arguments
+  python3 -m srtm $arguments
   ;;
 "worldpop")
-  python -m worldpop $arguments
+  python3 -m worldpop $arguments
   ;;
 "accessibility")
-  python -m accessibility $arguments
+  python3 -m accessibility $arguments
   ;;
 "test")
   pytest -s $arguments
   ;;
 "python")
-  python $arguments
+  python3 $arguments
   ;;
 "bash")
   bash $arguments
