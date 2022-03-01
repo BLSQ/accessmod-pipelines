@@ -23,14 +23,14 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY docker-entrypoint.sh \
-  accessmod/processing.py \
-  accessmod/utils.py \
-  accessmod/srtm.py \
-  accessmod/srtm30m_bounding_boxes.json \
-  accessmod/worldpop.py \
-  accessmod/countries.csv \
-  accessmod/accessibility.py \
-  accessmod/grasshelper.py \
+  processing.py \
+  utils.py \
+  srtm.py \
+  srtm30m_bounding_boxes.json \
+  worldpop.py \
+  countries.csv \
+  accessibility.py \
+  grasshelper.py \
   /app/
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
