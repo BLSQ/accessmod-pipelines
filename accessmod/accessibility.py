@@ -28,7 +28,12 @@ APP_NAME = "AccessMod"
 APP_AUTHOR = "Bluesquare"
 
 
-@click.command()
+@click.group()
+def cli():
+    pass
+
+
+@cli.command()
 @click.option("--output-dir", type=str, required=True, help="output data directory")
 @click.option("--dem", type=str, help="digital elevation model")
 @click.option("--slope", type=str, help="slope raster")
@@ -768,4 +773,4 @@ def anisotropic_costdistance(
 
 
 if __name__ == "__main__":
-    accessibility()
+    cli()
