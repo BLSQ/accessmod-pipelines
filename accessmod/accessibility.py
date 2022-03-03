@@ -2,6 +2,8 @@
 
 import logging
 import os
+import uuid
+from datetime import datetime
 from typing import List, Tuple
 
 import click
@@ -12,6 +14,8 @@ import pandas as pd
 import processing
 import rasterio
 import rasterio.features
+import requests
+import timezone
 import utils
 from appdirs import user_cache_dir
 from pyproj import CRS
@@ -74,6 +78,12 @@ def cli():
 @click.option(
     "--overwrite", is_flag=True, default=False, help="overwrite existing files"
 )
+@click.option(
+    "--webhook-url",
+    type=str,
+    help="URL to push a POST request with the analysis' results",
+)
+@click.option("--webhook-token", type=str, help="Token to use in the webhook POST")
 @click.argument("health-facilities")
 def accessibility(
     health_facilities: str,
@@ -95,6 +105,8 @@ def accessibility(
     invert_direction: bool,
     max_travel_time: int,
     overwrite: bool,
+    webhook_url: str,
+    webhook_token: str,
 ):
     """Perform an accessibility analysis."""
     fs = utils.filesystem(output_dir)
@@ -149,6 +161,29 @@ def accessibility(
         knight_move=knight_move,
         overwrite=overwrite,
     )
+
+    if webhook_url:
+        r = requests.post(
+            webhook_url,
+            headers={
+                "HTTP_AUTHORIZATION": f"Bearer {webhook_token}",
+            },
+            json={
+                "id": str(uuid.uuid4()),
+                "object": "event",
+                "created": datetime.timestamp(timezone.now()),
+                "type": "status_update",
+                "data": {
+                    "status": "SUCCESS",
+                    "outputs": {
+                        "travel_times": cost,
+                        "friction_surface": friction,
+                        "catchment_areas": catchment,
+                    },
+                },
+            },
+        )
+        r.raise_for_status()
 
 
 def speed_from_raster(src_raster: str, moving_speeds: dict) -> np.ndarray:
