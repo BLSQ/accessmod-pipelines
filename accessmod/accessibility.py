@@ -183,7 +183,7 @@ def accessibility(
                 },
             },
         )
-        r.raises_for_status()
+        r.raise_for_status()
 
 
 def speed_from_raster(src_raster: str, moving_speeds: dict) -> np.ndarray:
