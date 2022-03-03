@@ -15,7 +15,6 @@ import processing
 import rasterio
 import rasterio.features
 import requests
-import timezone
 import utils
 from appdirs import user_cache_dir
 from pyproj import CRS
@@ -171,7 +170,7 @@ def accessibility(
             json={
                 "id": str(uuid.uuid4()),
                 "object": "event",
-                "created": datetime.timestamp(timezone.now()),
+                "created": datetime.timestamp(datetime.now()),
                 "type": "status_update",
                 "data": {
                     "status": "SUCCESS",
