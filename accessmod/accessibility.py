@@ -138,6 +138,12 @@ def accessibility(
             for _, row in scenario_table[~class_is_int].iterrows()
         }
 
+    # temporary hack to support empty forms
+    if barrier == "None":
+        barrier = None
+    if water == "None":
+        water = None
+
     friction = friction_surface(
         dst_file=os.path.join(output_dir, "friction_surface.tif"),
         src_landcover=land_cover,
