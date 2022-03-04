@@ -3,7 +3,9 @@ import logging
 import os
 import random
 import string
+import uuid
 import zipfile
+from datetime import datetime
 from typing import List
 
 import pandas as pd
@@ -200,3 +202,34 @@ def filesystem(target_path: str) -> AbstractFileSystem:
 def random_string(length=16):
     chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
     return "".join(random.choice(chars) for i in range(length))
+
+
+def status_update(status: str, data: dict, url: str = None, token: str = None):
+    """Update analysis status with webhook."""
+    if not url or not token:
+        return
+
+    status = status.upper()
+    if status not in (
+        "DRAFT",
+        "READY",
+        "QUEUED",
+        "RUNNING",
+        "SUCCESS",
+        "FAILED",
+    ):
+        raise ValueError(f"Analysis status {status} invalid.")
+    data["status"] = status
+
+    r = requests.post(
+        url,
+        headers={"HTTP_AUTHORIZATION": f"Bearer {token}"},
+        json={
+            "id": str(uuid.uuid4()),
+            "object": "event",
+            "created": datetime.timestamp(datetime.utcnow()),
+            "type": "status_update",
+            "data": data,
+        },
+    )
+    r.raise_for_status()

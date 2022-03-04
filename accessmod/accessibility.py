@@ -2,8 +2,6 @@
 
 import logging
 import os
-import uuid
-from datetime import datetime
 from typing import List, Tuple
 
 import click
@@ -14,7 +12,6 @@ import pandas as pd
 import processing
 import rasterio
 import rasterio.features
-import requests
 import utils
 from appdirs import user_cache_dir
 from pyproj import CRS
@@ -108,6 +105,13 @@ def accessibility(
     webhook_token: str,
 ):
     """Perform an accessibility analysis."""
+    utils.status_update(
+        status="RUNNING",
+        data={},
+        url=webhook_url,
+        token=webhook_token,
+    )
+
     fs = utils.filesystem(output_dir)
     fs.makedirs(output_dir, exist_ok=True)
 
@@ -161,28 +165,16 @@ def accessibility(
         overwrite=overwrite,
     )
 
-    if webhook_url:
-        r = requests.post(
-            webhook_url,
-            headers={
-                "HTTP_AUTHORIZATION": f"Bearer {webhook_token}",
-            },
-            json={
-                "id": str(uuid.uuid4()),
-                "object": "event",
-                "created": datetime.timestamp(datetime.now()),
-                "type": "status_update",
-                "data": {
-                    "status": "SUCCESS",
-                    "outputs": {
-                        "travel_times": cost,
-                        "friction_surface": friction,
-                        "catchment_areas": catchment,
-                    },
-                },
-            },
-        )
-        r.raise_for_status()
+    utils.status_update(
+        status="SUCCESS",
+        data={
+            "travel_times": cost,
+            "friction_surface": friction,
+            "catchment_areas": catchment,
+        },
+        url=webhook_url,
+        token=webhook_token,
+    )
 
 
 def speed_from_raster(src_raster: str, moving_speeds: dict) -> np.ndarray:
