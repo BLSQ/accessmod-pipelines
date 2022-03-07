@@ -252,7 +252,9 @@ def speed_from_vector(
     ndarray
         Speed raster as a 2d numpy array.
     """
-    src_features = gpd.read_file(src_vector)
+    fs = utils.filesystem(src_vector)
+    with fs.open(src_vector) as f:
+        src_features = gpd.read_file(f)
     src_features = processing.enforce_crs(src_features, dst_crs)
 
     src_features["speed"] = src_features[category_column].apply(
