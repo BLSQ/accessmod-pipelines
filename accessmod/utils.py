@@ -223,7 +223,7 @@ def status_update(status: str, data: dict, url: str = None, token: str = None):
 
     r = requests.post(
         url,
-        headers={"HTTP_AUTHORIZATION": f"Bearer {token}"},
+        headers={"Authorization": f"Bearer {token}"},
         json={
             "id": str(uuid.uuid4()),
             "object": "event",
