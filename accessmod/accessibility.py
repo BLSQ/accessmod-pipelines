@@ -174,9 +174,11 @@ def accessibility(
     utils.status_update(
         status="SUCCESS",
         data={
-            "travel_times": cost,
-            "friction_surface": friction,
-            "catchment_areas": catchment,
+            "outputs": {
+                "travel_times": cost,
+                "friction_surface": friction,
+                "catchment_areas": catchment,
+            }
         },
         url=webhook_url,
         token=webhook_token,
