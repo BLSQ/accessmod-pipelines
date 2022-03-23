@@ -10,6 +10,7 @@ import grasshelper
 import numpy as np
 import pandas as pd
 import processing
+import production  # noqa
 import rasterio
 import rasterio.features
 import utils

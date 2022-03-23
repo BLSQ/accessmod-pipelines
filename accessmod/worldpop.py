@@ -3,6 +3,7 @@ import os
 from time import monotonic
 
 import click
+import production  # noqa
 import requests
 import utils
 from fsspec import AbstractFileSystem
