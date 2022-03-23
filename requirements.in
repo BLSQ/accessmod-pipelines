@@ -11,3 +11,4 @@ responses
 s3fs==2022.01.0
 gcsfs==2022.01.0
 fsspec==2022.01.0
+sentry-sdk
