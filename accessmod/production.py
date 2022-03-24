@@ -52,7 +52,7 @@ if "HEXA_PIPELINE_TOKEN" in os.environ:
     r = requests.post(
         os.environ["HEXA_CREDENTIALS_URL"],
         headers={"Authorization": f"Bearer {token}"},
-        timeout=10,
+        timeout=30,
     )
     r.raise_for_status()
     data = r.json()
