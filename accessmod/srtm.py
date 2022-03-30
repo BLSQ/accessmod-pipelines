@@ -319,7 +319,7 @@ def cli():
 
 
 @cli.command()
-@click.option("--country", type=str, required=True, help="country code")
+@click.option("--extent", type=str, required=True, help="boundaries of acquisition")
 @click.option(
     "--username",
     type=str,
@@ -339,13 +339,14 @@ def cli():
     "--overwrite", is_flag=True, default=False, help="overwrite existing files"
 )
 def download(
-    country: str,
+    extent: str,
     username: str,
     password: str,
     output_dir: str,
     overwrite: bool,
 ):
     """Download SRTM tiles."""
+    country = "BFA"
     geom = utils.country_geometry(country)
     catalog = SRTM()
     catalog.login(username, password)
@@ -355,7 +356,7 @@ def download(
 
 
 @cli.command()
-@click.option("--country", type=str, required=True, help="country code")
+@click.option("--extent", type=str, required=True, help="boundaries of acquisition")
 @click.option("--epsg", type=int, required=True, help="target epsg code")
 @click.option("--resolution", type=int, required=True, help="spatial resolution (m)")
 @click.option("--input-dir", type=str, required=True, help="input directory")
@@ -364,7 +365,7 @@ def download(
     "--overwrite", is_flag=True, default=False, help="overwrite existing files"
 )
 def process(
-    country: str,
+    extent: str,
     epsg: int,
     resolution: float,
     input_dir: str,
@@ -382,6 +383,7 @@ def process(
     os.makedirs(output_dir, exist_ok=True)
 
     # get raster metadata from country boundaries, spatial resolution and EPSG
+    country = "BFA"
     geom = utils.country_geometry(country)
     dst_crs = CRS.from_epsg(int(epsg))
     _, shape, bounds = processing.create_grid(

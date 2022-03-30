@@ -3,7 +3,6 @@ import os
 
 import click
 import production  # noqa
-import utils
 from fsspec import AbstractFileSystem
 from fsspec.implementations.http import HTTPFileSystem
 from fsspec.implementations.local import LocalFileSystem
@@ -44,33 +43,29 @@ def cli():
 
 
 @cli.command()
-@click.option("--country", type=str, required=True, help="country code")
+@click.option("--extent", type=str, required=True, help="boundaries of acquisition")
 @click.option("--output-dir", type=str, required=True, help="output data directory")
 @click.option(
     "--overwrite", is_flag=True, default=False, help="overwrite existing files"
 )
 def download(
-    country: str,
+    extent: str,
     year: int,
     output_dir: str,
     overwrite: bool,
 ):
-    """Download Copernicus GLC."""
-    if not utils.country_is_valid(country):
-        raise ValueError(f"{country} is not a valid country code.")
-
     print("DOWNLOAD OK")
 
 
 @cli.command()
-@click.option("--country", type=str, required=True, help="country code")
+@click.option("--extent", type=str, required=True, help="boundaries of acquisition")
 @click.option("--output_dir", type=str, help="output data directory")
 @click.option("--input-dir", type=str, required=True, help="input data directory")
 @click.option(
     "--overwrite", is_flag=True, default=False, help="overwrite existing files"
 )
 def extract_water_layer(
-    country: str,
+    extent: str,
     output_dir: str,
     input_dir: str,
     overwrite: bool,
@@ -79,14 +74,14 @@ def extract_water_layer(
 
 
 @cli.command()
-@click.option("--country", type=str, required=True, help="country code")
+@click.option("--extent", type=str, required=True, help="boundaries of acquisition")
 @click.option("--output_dir", type=str, help="output data directory")
 @click.option("--input-dir", type=str, required=True, help="input data directory")
 @click.option(
     "--overwrite", is_flag=True, default=False, help="overwrite existing files"
 )
 def extract_transport_layer(
-    country: str,
+    extent: str,
     output_dir: str,
     input_dir: str,
     overwrite: bool,

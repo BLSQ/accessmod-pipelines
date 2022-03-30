@@ -3,7 +3,6 @@ import os
 
 import click
 import production  # noqa
-import utils
 from fsspec import AbstractFileSystem
 from fsspec.implementations.http import HTTPFileSystem
 from fsspec.implementations.local import LocalFileSystem
@@ -44,27 +43,24 @@ def cli():
 
 
 @cli.command()
-@click.option("--country", type=str, required=True, help="country code")
+@click.option("--extent", type=str, required=True, help="boundaries of acquisition")
 @click.option("--year", type=int, required=True, default=2020, help="year of interest")
 @click.option("--output-dir", type=str, required=True, help="output data directory")
 @click.option(
     "--overwrite", is_flag=True, default=False, help="overwrite existing files"
 )
 def download(
-    country: str,
+    extent: str,
     year: int,
     output_dir: str,
     overwrite: bool,
 ):
     """Download Copernicus GLC."""
-    if not utils.country_is_valid(country):
-        raise ValueError(f"{country} is not a valid country code.")
-
     print("DOWNLOAD OK")
 
 
 @cli.command()
-@click.option("--country", type=str, required=True, help="country code")
+@click.option("--extent", type=str, required=True, help="boundaries of acquisition")
 @click.option("--year", type=int, required=True, default=2020, help="year of interest")
 @click.option("--resolution", type=int, default=100, help="spatial resolution (m)")
 @click.option("--crs", type=int, help="CRS id")
@@ -74,7 +70,7 @@ def download(
     "--overwrite", is_flag=True, default=False, help="overwrite existing files"
 )
 def process(
-    country: str,
+    extent: str,
     year: int,
     resolution: int,
     crs: int,
