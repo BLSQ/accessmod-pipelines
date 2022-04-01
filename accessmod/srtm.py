@@ -25,7 +25,6 @@ References
 
 import logging
 import os
-import shutil
 import tempfile
 from typing import List
 
@@ -185,25 +184,27 @@ class SRTM:
         os.makedirs(output_dir, exist_ok=True)
 
         fp_cache = os.path.join(user_cache_dir("accessmod"), "srtm", "tiles", fname)
+        fs = utils.filesystem(fp)
 
-        if os.path.isfile(fp) and not overwrite:
+        if fs.exist(fp) and not overwrite:
             logger.info(f"File {fp} already exists.")
             return fp
 
         if os.path.isfile(fp_cache) and not overwrite and use_cache:
-            shutil.copyfile(fp_cache, fp)
+            with fs.open(fp, "wb") as f:
+                with open(fp_cache, "rb") as f_cache:
+                    f.write(f_cache.read())
             logger.info(f"Found SRTM tile in cache at {fp_cache}.")
             return fp
 
         with self._session.get(url, stream=True, timeout=self._timeout) as r:
-
             try:
                 r.raise_for_status()
             except Exception as e:
                 logger.error(e)
 
-            if os.path.isfile(fp) and overwrite:
-                os.remove(fp)
+            if fs.exist(fp) and overwrite:
+                fs.rm(fp)
 
             size = r.headers.get("content-length")
             if not size:
@@ -215,13 +216,11 @@ class SRTM:
                     f"File at {url} appears to be empty."
                 )
 
-            with open(fp, "wb") as f:
-                for chunk in r.iter_content(chunk_size=1024):
-                    if chunk:
-                        f.write(chunk)
+            with fs.open(fp, "wb") as f:
+                f.write(r.content)
             logger.info(f"Downloaded SRTM tile from {url} to {fp}.")
 
-            size_local = os.path.getsize(fp)
+            size_local = fs.size(fp)
             if size_local != int(size):
                 raise SRTMError(
                     f"Size of {fp} is invalid "
@@ -231,7 +230,8 @@ class SRTM:
 
             if use_cache:
                 os.makedirs(os.path.dirname(fp_cache), exist_ok=True)
-                shutil.copyfile(fp, fp_cache)
+                with fs.open(fp_cache, "wb") as f:
+                    f.write(r.content)
                 logger.info(f"Cached SRTM tile to {fp_cache}.")
 
         return fp
@@ -254,7 +254,8 @@ def merge_tiles(tiles: List[str], dst_file: str, overwrite: bool = False):
     dst_file : str
         Path to output geotiff.
     """
-    if os.path.isfile(dst_file) and not overwrite:
+    fs = utils.filesystem(dst_file)
+    if fs.isfile(dst_file) and not overwrite:
         logger.info(f"File {dst_file} already exists.")
         return dst_file
 
@@ -298,7 +299,8 @@ def compute_slope(dem: str, dst_file: str, overwrite: bool = False) -> str:
     if not src_ds.GetSpatialRef().IsProjected():
         scale = 111120
 
-    if os.path.isfile(dst_file) and not overwrite:
+    fs = utils.filesystem(dst_file)
+    if fs.isfile(dst_file) and not overwrite:
         logger.info(f"File {dst_file} already exists.")
         return dst_file
 
@@ -379,7 +381,9 @@ def process(
     """
     dst_dem = os.path.join(output_dir, "dem.tif")
     dst_slope = os.path.join(output_dir, "slope.tif")
-    os.makedirs(output_dir, exist_ok=True)
+    fs = utils.filesystem(dst_dem)
+
+    fs.makedirs(output_dir, exist_ok=True)
 
     # get raster metadata from country boundaries, spatial resolution and EPSG
     geom = utils.parse_extent(extent)
@@ -389,9 +393,9 @@ def process(
     )
 
     for fp, label in zip((dst_dem, dst_slope), ("DEM", "Slope")):
-        if os.path.isfile(fp):
+        if fs.isfile(fp):
             if overwrite:
-                os.remove(fp)
+                fs.rm(fp)
                 logger.info(f"Deleted old {label} file at {fp}.")
             else:
                 raise FileExistsError(f"{label} already exists at {fp}.")
