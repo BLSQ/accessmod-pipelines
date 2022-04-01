@@ -346,10 +346,9 @@ def download(
     overwrite: bool,
 ):
     """Download SRTM tiles."""
-    country = "BFA"
-    geom = utils.country_geometry(country)
     catalog = SRTM()
     catalog.login(username, password)
+    geom = utils.parse_extent(extent)
     tiles = catalog.find(geom)
     for tile in tiles:
         catalog.download(tile, output_dir, overwrite=overwrite, use_cache=True)
@@ -383,8 +382,7 @@ def process(
     os.makedirs(output_dir, exist_ok=True)
 
     # get raster metadata from country boundaries, spatial resolution and EPSG
-    country = "BFA"
-    geom = utils.country_geometry(country)
+    geom = utils.parse_extent(extent)
     dst_crs = CRS.from_epsg(int(epsg))
     _, shape, bounds = processing.create_grid(
         geom=geom, dst_crs=dst_crs, dst_res=resolution
