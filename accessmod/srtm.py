@@ -186,7 +186,7 @@ class SRTM:
         fp_cache = os.path.join(user_cache_dir("accessmod"), "srtm", "tiles", fname)
         fs = utils.filesystem(fp)
 
-        if fs.exist(fp) and not overwrite:
+        if fs.exists(fp) and not overwrite:
             logger.info(f"File {fp} already exists.")
             return fp
 
@@ -203,7 +203,7 @@ class SRTM:
             except Exception as e:
                 logger.error(e)
 
-            if fs.exist(fp) and overwrite:
+            if fs.exists(fp) and overwrite:
                 fs.rm(fp)
 
             size = r.headers.get("content-length")
