@@ -42,7 +42,7 @@ def country_is_valid(country_code: str) -> bool:
     return country_code.upper() in countries["ISO-A3"].values
 
 
-def extent_geometry(extent) -> Polygon:
+def parse_extent(extent) -> Polygon:
     coords = extent.strip().split(",")
     assert len(coords) == 4, "extent must be formated as lng1,lat1,lng2,lat2"
     lng1, lat1, lng2, lat2 = [float(x) for x in coords]
