@@ -190,6 +190,7 @@ def reproject(
         resampling_alg="bilinear",
     )
     processing.mask(raster_reproj_file_p1, raster_reproj_file_p2, target_geom)
+    logger.info(f"Reprojected {raster_file} into {raster_reproj_file_p2}")
     return raster_reproj_file_p2
 
 
