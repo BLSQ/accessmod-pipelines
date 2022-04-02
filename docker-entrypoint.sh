@@ -12,7 +12,7 @@ show_help() {
   srtm             : start SRTM subsystem (DEM/Slope)
   ghf              : start GHF subsystem (health facilities)
   osm              : start OSM subsystem (water/transport)
-  coppernicus_glc  : start Coppernicus GLC subsystem (land cover)
+  copernicus_glc   : start Coppernicus GLC subsystem (land cover)
   worldpop         : start worldpop subsystem (population)
   accessibility    : start accessibility analysis
   python           : run arbitrary python code
@@ -36,8 +36,8 @@ case "$command" in
 "osm")
   python3 -m osm $arguments
   ;;
-"coppernicus_glc")
-  python3 -m coppernicus_glc $arguments
+"copernicus_glc")
+  python3 -m copernicus_glc $arguments
   ;;
 "accessibility")
   python3 -m accessibility $arguments
