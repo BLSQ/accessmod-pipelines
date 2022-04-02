@@ -181,10 +181,9 @@ class SRTM:
         """
         fname = url.split("/")[-1]
         fp = os.path.join(output_dir, fname)
-        os.makedirs(output_dir, exist_ok=True)
-
         fp_cache = os.path.join(user_cache_dir("accessmod"), "srtm", "tiles", fname)
         fs = utils.filesystem(fp)
+        fs.makedirs(output_dir, exist_ok=True)
 
         if fs.exists(fp) and not overwrite:
             logger.info(f"File {fp} already exists.")
@@ -230,7 +229,7 @@ class SRTM:
 
             if use_cache:
                 os.makedirs(os.path.dirname(fp_cache), exist_ok=True)
-                with fs.open(fp_cache, "wb") as f:
+                with open(fp_cache, "wb") as f:
                     f.write(r.content)
                 logger.info(f"Cached SRTM tile to {fp_cache}.")
 
@@ -401,7 +400,6 @@ def process(
                 raise FileExistsError(f"{label} already exists at {fp}.")
 
     with tempfile.TemporaryDirectory(prefix="AccessMod_") as tmp_dir:
-
         tiles = utils.unzip_all(input_dir, tmp_dir)
         if len(tiles) == 0:
             return FileNotFoundError(f"No SRTM tile found at {input_dir}.")
