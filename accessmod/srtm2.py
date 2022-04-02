@@ -1,26 +1,12 @@
-"""Search and download SRTM tiles.
+"""
+ - Download SRTM tiles, from NASA EarthData servers
+ - merge them, compute slope and reproject them
+ - upload everything in an output_dir
 
-The module provides a `SRTM` class to search and download SRTM tiles from the
-NASA EarthData server.
-
-Examples
---------
-Downloading SRTM tiles to cover the area of interest `extent` into `output_dir`::
-
-    srtm = SRTM()
-    srtm.login(username, password)
-    extent = country_geometry("COD")
-    tiles = srtm.find(extent)
-    for tile in tiles:
-        srtm.download(tile, output_dir)
-
-Notes
------
-EarthData credentials are required. Registration [1]_ is free.
-
-References
-----------
-.. [1] `NASA EarthData Register <https://urs.earthdata.nasa.gov/users/new>`_
+Notes:
+ - Info about datasets here: https://lpdaac.usgs.gov/
+ - EarthData credentials are required. Registration is free, here:
+   https://urs.earthdata.nasa.gov/users/new
 """
 
 import logging
