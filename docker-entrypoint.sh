@@ -25,7 +25,7 @@ show_help() {
 
 case "$command" in
 "srtm")
-  python3 -m srtm $arguments
+  python3 -m srtm2 $arguments
   ;;
 "worldpop")
   python3 -m worldpop $arguments
