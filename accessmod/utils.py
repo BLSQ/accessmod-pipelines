@@ -248,3 +248,16 @@ def status_update(status: str, data: dict, url: str = None, token: str = None):
         },
     )
     r.raise_for_status()
+
+
+def upload_file(src_file: str, dst_file: str, overwrite: bool):
+    fs = filesystem(dst_file)
+
+    if fs.exists(dst_file) and not overwrite:
+        logger.info(f"upload_file(): {dst_file} exists and not overwrite")
+        return
+
+    src_fd = open(src_file, "rb")
+    dst_fd = fs.open(dst_file, "wb")
+    dst_fd.write(src_fd.read())
+    dst_fd.close()

@@ -121,19 +121,6 @@ def reproject(
     return raster_reproj_file_p2
 
 
-def upload_file(src_file: str, dst_file: str, overwrite: bool):
-    fs = utils.filesystem(dst_file)
-
-    if fs.exists(dst_file) and not overwrite:
-        logger.info(f"upload_file(): {dst_file} exists and not overwrite")
-        return
-
-    src_fd = open(src_file, "rb")
-    dst_fd = fs.open(dst_file, "wb")
-    dst_fd.write(src_fd.read())
-    dst_fd.close()
-
-
 @click.group()
 def cli():
     pass
@@ -171,7 +158,7 @@ def generate_land_cover(
 
     # upload results
     dst_land_cover = os.path.join(output_dir, "land_cover.tif")
-    upload_file(land_cover_proj, dst_land_cover, overwrite)
+    utils.upload_file(land_cover_proj, dst_land_cover, overwrite)
     logger.info("generate_land_cover() finished")
 
 

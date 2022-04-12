@@ -194,19 +194,6 @@ def reproject(
     return raster_reproj_file_p2
 
 
-def upload_file(src_file: str, dst_file: str, overwrite: bool):
-    fs = utils.filesystem(dst_file)
-
-    if fs.exists(dst_file) and not overwrite:
-        logger.info(f"upload_file(): {dst_file} exists and not overwrite")
-        return
-
-    src_fd = open(src_file, "rb")
-    dst_fd = fs.open(dst_file, "wb")
-    dst_fd.write(src_fd.read())
-    dst_fd.close()
-
-
 @click.group()
 def cli():
     pass
@@ -260,9 +247,9 @@ def compute_dem_slope(
 
     # upload results
     dst_dem_file = os.path.join(output_dir, "dem.tif")
-    upload_file(dem_proj_file, dst_dem_file, overwrite)
+    utils.upload_file(dem_proj_file, dst_dem_file, overwrite)
     dst_slope_file = os.path.join(output_dir, "slope.tif")
-    upload_file(slope_proj_file, dst_slope_file, overwrite)
+    utils.upload_file(slope_proj_file, dst_slope_file, overwrite)
     logger.info("compute_dem_slope() finished")
 
 

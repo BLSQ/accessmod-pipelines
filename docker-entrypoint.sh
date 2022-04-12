@@ -10,7 +10,7 @@ show_help() {
   Available commands:
 
   srtm             : start SRTM subsystem (DEM/Slope)
-  ghf              : start GHF subsystem (health facilities)
+  healthsites      : start healthsites subsystem (health facilities)
   osm              : start OSM subsystem (water/transport)
   copernicus_glc   : start Coppernicus GLC subsystem (land cover)
   worldpop         : start worldpop subsystem (population)
@@ -30,8 +30,8 @@ case "$command" in
 "worldpop")
   python3 -m worldpop $arguments
   ;;
-"ghf")
-  python3 -m ghf $arguments
+"healthsites")
+  python3 -m healthsites $arguments
   ;;
 "osm")
   python3 -m osm $arguments
