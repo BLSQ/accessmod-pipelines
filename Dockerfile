@@ -36,7 +36,7 @@ COPY docker-entrypoint.sh \
   grasshelper.py \
   osm.py \
   healthsites.py \
-  copernicus_glc \
+  copernicus_glc.py \
   cgls_bounding_boxes.json \
   countries_pbf.json \
   /app/
