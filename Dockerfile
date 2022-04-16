@@ -26,12 +26,16 @@ COPY docker-entrypoint.sh \
   processing.py \
   utils.py \
   srtm.py \
+  srtm2.py \
   srtm30m_bounding_boxes.json \
   worldpop.py \
   countries.csv \
   production.py \
   accessibility.py \
   grasshelper.py \
+  osm.py \
+  healthsites.py \
+  countries_pbf.json \
   /app/
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
