@@ -53,6 +53,7 @@ def download_healthsites(
         return url
 
     logger.info("Test token and download facilities list")
+    os.makedirs(WORK_DIR, exist_ok=True)
 
     r = requests.get(
         url_builder(
