@@ -32,7 +32,7 @@
     "barriers": [
         {
             "path": "wetlands.gpkg",
-            "all_touched": false,
+            "all-touched": false,
             "name": "wetlands"
         }
     ],
@@ -41,7 +41,7 @@
         "download": false,
         "path": "rivers.gpkg",
         "name": "water",
-        "all_touched": true
+        "all-touched": true
     },
     "health-facilities": {
         "enabled": true,
@@ -50,10 +50,18 @@
         "name": "health-facilities"
     },
     "priorities": [
-        {"name": "transport-network"},
-        {"name": "water"},
-        {"name": "wetlands"},
-        {"name": "land-cover"}
+        {
+            "name": "transport-network"
+        },
+        {
+            "name": "water"
+        },
+        {
+            "name": "wetlands"
+        },
+        {
+            "name": "land-cover"
+        }
     ],
     "moving-speeds": {
         "Built_area": 6,
@@ -66,5 +74,5 @@
     "algorithm": "isotropic",
     "knight-move": false,
     "invert-direction": false,
-    "max-travel-time": 360    
+    "max-travel-time": 360
 }

@@ -115,7 +115,7 @@ def accessibility(
             layers.append(
                 BarrierLayer(
                     filepath=barrier["path"],
-                    all_touched=barrier.get("all_touched"),
+                    all_touched=barrier.get("all-touched"),
                     name=barrier.get("name"),
                 )
             )
