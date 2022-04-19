@@ -39,11 +39,14 @@ def cli():
     envvar="HEALTHSITES_TOKEN",
     help="healthsites api token",
 )
+@click.option(
+    "--amenity",
+    type=str,
+    required=False,
+    help="filter health facilities by amenity property",
+)
 def download_healthsites(
-    extent: str,
-    output_dir: str,
-    overwrite: bool,
-    token: str,
+    extent: str, output_dir: str, overwrite: bool, token: str, amenity: str = None
 ):
     """Download list of health facilities for accessmod analysis"""
 
@@ -106,6 +109,8 @@ def download_healthsites(
         logger.info("Page %s downloaded", page)
 
     df = gpd.GeoDataFrame(dataset)
+    if amenity:
+        df = df[df.amenity == amenity]
 
     # upload results
     local_file = os.path.join(WORK_DIR, "facilities.geojson")
