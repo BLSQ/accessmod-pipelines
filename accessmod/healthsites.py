@@ -108,9 +108,9 @@ def download_healthsites(
     df = gpd.GeoDataFrame(dataset)
 
     # upload results
-    local_file = os.path.join(WORK_DIR, "facilities.shp")
-    dst_file = os.path.join(output_dir, "facilities.shp")
-    df.to_file(local_file)
+    local_file = os.path.join(WORK_DIR, "facilities.geojson")
+    dst_file = os.path.join(output_dir, "facilities.geojson")
+    df.to_file(local_file, driver="GeoJSON")
     utils.upload_file(local_file, dst_file, overwrite)
 
 
