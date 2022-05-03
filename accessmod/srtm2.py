@@ -175,7 +175,7 @@ def reproject(
 ) -> str:
     dst_crs = CRS.from_epsg(int(epsg))
     _, shape, bounds = processing.create_grid(
-        geom=target_geom, dst_crs=dst_crs, dst_res=int(resolution)
+        geom=target_geom, dst_crs=dst_crs, dst_res=resolution
     )
     raster_reproj_file_p1 = raster_file.replace(".tif", "_reproj_p1.tif")
     raster_reproj_file_p2 = raster_file.replace(".tif", "_reproj_p2.tif")
@@ -238,6 +238,10 @@ def compute_dem_slope(
     # download tiles
     target_geometry = utils.parse_extent(extent)
     tiles = download(target_geometry, username, password)
+
+    # since we are using CRS 4326, which is in degree, not meter -> cast
+    # resolution in something else. use equator length / 360°
+    resolution /= 40075017 / 360.0
 
     # geo stuff
     dem_file = merge_tiles(tiles)
