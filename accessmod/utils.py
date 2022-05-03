@@ -252,6 +252,7 @@ def status_update(status: str, data: dict, url: str = None, token: str = None):
 
 def upload_file(src_file: str, dst_file: str, overwrite: bool):
     fs = filesystem(dst_file)
+    fs.makedirs(os.path.dirname(dst_file), exist_ok=True)
 
     if fs.exists(dst_file) and not overwrite:
         logger.info(f"upload_file(): {dst_file} exists and not overwrite")
