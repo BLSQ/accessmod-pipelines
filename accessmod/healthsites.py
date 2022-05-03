@@ -113,9 +113,9 @@ def download_healthsites(
         df = df[df.amenity == amenity]
 
     # upload results
-    local_file = os.path.join(WORK_DIR, "facilities.geojson")
-    dst_file = os.path.join(output_dir, "facilities.geojson")
-    df.to_file(local_file, driver="GeoJSON")
+    local_file = os.path.join(WORK_DIR, "facilities.gpkg")
+    dst_file = os.path.join(output_dir, "facilities.gpkg")
+    df.to_file(local_file, driver="GPKG")
     utils.upload_file(local_file, dst_file, overwrite)
 
 

@@ -75,7 +75,7 @@ def extract_pbf(pbfs, target_file, target_geo, expressions, properties):
     geodf_final = geodf.reset_index(drop=True)
     del geodf
     geodf_final.crs = {"init": "epsg:4326"}
-    geodf_final.to_file(target_file)
+    geodf_final.to_file(target_file, driver="GPKG")
     del geodf_final
     logger.info("Geodf dumped to %s", target_file)
 
@@ -116,7 +116,7 @@ def extract_from_osm(
         open(localpath, "wb").write(r.content)
         logger.info("Downloaded %s to %s", country["pbf"], localpath)
 
-    transport_file = os.path.join(WORK_DIR, "transport.shp")
+    transport_file = os.path.join(WORK_DIR, "transport.gpkg")
     extract_pbf(
         list(countries.localpath),
         transport_file,
@@ -137,7 +137,7 @@ def extract_from_osm(
         ],
     )
 
-    water_file = os.path.join(WORK_DIR, "water.shp")
+    water_file = os.path.join(WORK_DIR, "water.gpkg")
     extract_pbf(
         list(countries.localpath),
         water_file,
@@ -148,8 +148,8 @@ def extract_from_osm(
 
     logger.info("extract_from_osm() upload")
 
-    rem_transport_file = os.path.join(output_dir, "transport.shp")
-    rem_water_file = os.path.join(output_dir, "water.shp")
+    rem_transport_file = os.path.join(output_dir, "transport.gpkg")
+    rem_water_file = os.path.join(output_dir, "water.gpkg")
     utils.upload_file(transport_file, rem_transport_file, overwrite)
     utils.upload_file(water_file, rem_water_file, overwrite)
     logger.info("extract_from_osm() finished")
