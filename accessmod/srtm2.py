@@ -150,8 +150,10 @@ def download_mirror(target_geom: BaseGeometry) -> List[str]:
     # download a list of tiles
     downloaded_tiles = []
     for tile_code in tiles["dataFile"].values:
-        full_local_path = os.path.join(WORK_DIR, tile_code)
         full_remote_path = os.path.join(TILE_PATH, tile_code)
+        full_local_path = os.path.join(WORK_DIR, tile_code)
+        if full_local_path.endswith(".zip"):
+            full_local_path = full_local_path[:-4]
         logger.info(f"Download {tile_code}")
 
         if not fs.exists(full_remote_path):
