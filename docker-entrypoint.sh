@@ -9,7 +9,7 @@ show_help() {
   echo """
   Available commands:
 
-  srtm             : start SRTM subsystem (DEM/Slope)
+  srtm             : start SRTM subsystem (DEM)
   healthsites      : start healthsites subsystem (health facilities)
   osm              : start OSM subsystem (water/transport)
   copernicus_glc   : start Coppernicus GLC subsystem (land cover)
