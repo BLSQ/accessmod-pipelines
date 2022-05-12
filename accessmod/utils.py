@@ -284,3 +284,17 @@ def parse_config(string) -> dict:
     else:
         logger.info("Loading config from string")
         return json.loads(base64.b64decode(string.encode()).decode())
+
+
+def upload_file(src_file: str, dst_file: str, overwrite: bool):
+    fs = filesystem(dst_file)
+    fs.makedirs(os.path.dirname(dst_file), exist_ok=True)
+
+    if fs.exists(dst_file) and not overwrite:
+        logger.info(f"upload_file(): {dst_file} exists and not overwrite")
+        return
+
+    src_fd = open(src_file, "rb")
+    dst_fd = fs.open(dst_file, "wb")
+    dst_fd.write(src_fd.read())
+    dst_fd.close()

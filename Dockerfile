@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
   libgdal-dev \
   locales \
   python3-six \
+  osmium-tool \
   && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /app
@@ -26,12 +27,18 @@ COPY docker-entrypoint.sh \
   processing.py \
   utils.py \
   srtm.py \
+  srtm2.py \
   srtm30m_bounding_boxes.json \
   worldpop.py \
   countries.csv \
   production.py \
   accessibility.py \
   grasshelper.py \
+  osm.py \
+  healthsites.py \
+  copernicus_glc.py \
+  cgls_bounding_boxes.json \
+  countries_pbf.json \
   /app/
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]

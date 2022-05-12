@@ -1,13 +1,36 @@
+"""
+ - Download CGLS tiles, from BLSQ cache
+ - merge them, reproject and mask them to get land cover
+ - upload everything in an output_dir
+
+Notes:
+ - Info about datasets here: https://lcviewer.vito.be/download
+ - Urls are not the same year to year, patterns here:
+```
+https://s3-eu-west-1.amazonaws.com/vito.landcover.global/v3.0.1/2015/E000N40/E000N40_PROBAV_LC100_global_v3.0.1_2015-base_Discrete-Classification-map_EPSG-4326.tif
+https://s3-eu-west-1.amazonaws.com/vito.landcover.global/v3.0.1/2016/E000N40/E000N40_PROBAV_LC100_global_v3.0.1_2016-conso_Discrete-Classification-map_EPSG-4326.tif
+https://s3-eu-west-1.amazonaws.com/vito.landcover.global/v3.0.1/2017/E000N40/E000N40_PROBAV_LC100_global_v3.0.1_2017-conso_Discrete-Classification-map_EPSG-4326.tif
+https://s3-eu-west-1.amazonaws.com/vito.landcover.global/v3.0.1/2018/E000N40/E000N40_PROBAV_LC100_global_v3.0.1_2018-conso_Discrete-Classification-map_EPSG-4326.tif
+https://s3-eu-west-1.amazonaws.com/vito.landcover.global/v3.0.1/2019/E000N40/E000N40_PROBAV_LC100_global_v3.0.1_2019-nrt_Discrete-Classification-map_EPSG-4326.tif
+```
+
+"""
+
 import logging
 import os
+from typing import List
 
 import click
+import geopandas as gpd
+import processing
 import production  # noqa
-from fsspec import AbstractFileSystem
-from fsspec.implementations.http import HTTPFileSystem
-from fsspec.implementations.local import LocalFileSystem
-from gcsfs import GCSFileSystem
-from s3fs import S3FileSystem
+import rasterio
+import rasterio.merge
+import utils
+from appdirs import user_cache_dir
+from processing import RASTERIO_DEFAULT_PROFILE
+from rasterio.crs import CRS
+from shapely.geometry.base import BaseGeometry
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
@@ -17,24 +40,85 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def filesystem(target_path: str) -> AbstractFileSystem:
-    """Guess filesystem based on path"""
-    client_kwargs = {}
-    if "://" in target_path:
-        target_protocol = target_path.split("://")[0]
-        if target_protocol == "s3":
-            fs_class = S3FileSystem
-            client_kwargs = {"endpoint_url": os.environ.get("AWS_S3_ENDPOINT")}
-        elif target_protocol == "gcs":
-            fs_class = GCSFileSystem
-        elif target_protocol == "http" or target_protocol == "https":
-            fs_class = HTTPFileSystem
-        else:
-            raise ValueError(f"Protocol {target_protocol} not supported.")
-    else:
-        fs_class = LocalFileSystem
+# folder containing the pipeline source (assume RO access)
+SRC_DIR = os.path.dirname(__file__)
 
-    return fs_class(client_kwargs=client_kwargs)
+# folder to store temporary files, ... (assume RW access)
+WORK_DIR = os.path.join(user_cache_dir("accessmod"), "CGLS")
+
+# cache folder containing the tiles
+TILE_PATH = "s3://hexa-demo-accessmod/CGLS-tiles/"
+
+
+def download(target_geom: BaseGeometry, year: int) -> List[str]:
+    # get a list of tiles to cover target geometry
+    bounding_boxes_file = os.path.join(SRC_DIR, "cgls_bounding_boxes.json")
+    bounding_boxes = gpd.read_file(bounding_boxes_file, driver="GeoJSON")
+    tiles = bounding_boxes[bounding_boxes.intersects(target_geom)]
+    if tiles.empty:
+        raise ValueError("No SRTM tile found for the area of interest.")
+    logger.info(f"download() found {len(tiles)} CGLS tiles to cover target.")
+
+    fs = utils.filesystem("s3://a-bucket/")
+
+    # download a list of tiles
+    downloaded_tiles = []
+    for tile_code in tiles["dataFile"].values:
+        file_name = f"{year}_{tile_code}_PROBAV_LC100_global_map_EPSG-4326.tif"
+        full_local_path = os.path.join(WORK_DIR, file_name)
+        full_remote_path = os.path.join(TILE_PATH, file_name)
+        logger.info(f"Download {file_name}")
+
+        if not fs.exists(full_remote_path):
+            raise Exception(f"tile {file_name} not found in {TILE_PATH}")
+
+        fd_remote = fs.open(full_remote_path, "rb")
+        fd_local = open(full_local_path, "wb")
+        fd_local.write(fd_remote.read())
+        downloaded_tiles.append(full_local_path)
+
+    logger.info(f"Downloaded {len(downloaded_tiles)} tiles")
+    return downloaded_tiles
+
+
+def merge_tiles(tiles: List[str]) -> str:
+    dst_file = os.path.join(WORK_DIR, "mosaic.tif")
+    with rasterio.open(tiles[0]) as src:
+        meta = src.meta.copy()
+
+    mosaic, dst_transform = rasterio.merge.merge(tiles)
+    meta.update(RASTERIO_DEFAULT_PROFILE)
+    meta.update(transform=dst_transform, height=mosaic.shape[1], width=mosaic.shape[2])
+
+    with rasterio.open(dst_file, "w", **meta) as dst:
+        dst.write(mosaic)
+
+    logger.info(f"Merged {len(tiles)} tiles into mosaic {dst_file}.")
+    return dst_file
+
+
+def reproject(
+    target_geom: BaseGeometry, raster_file: str, epsg: int, resolution: int
+) -> str:
+    dst_crs = CRS.from_epsg(int(epsg))
+    _, shape, bounds = processing.create_grid(
+        geom=target_geom, dst_crs=dst_crs, dst_res=resolution
+    )
+    raster_reproj_file_p1 = raster_file.replace(".tif", "_reproj_p1.tif")
+    raster_reproj_file_p2 = raster_file.replace(".tif", "_reproj_p2.tif")
+    processing.reproject(
+        raster_file,
+        raster_reproj_file_p1,
+        dst_crs=dst_crs,
+        dtype="int16",
+        bounds=bounds,
+        height=shape[0],
+        width=shape[1],
+        resampling_alg="bilinear",
+    )
+    processing.mask(raster_reproj_file_p1, raster_reproj_file_p2, target_geom)
+    logger.info(f"Reprojected into {raster_reproj_file_p2}")
+    return raster_reproj_file_p2
 
 
 @click.group()
@@ -44,41 +128,42 @@ def cli():
 
 @cli.command()
 @click.option("--extent", type=str, required=True, help="boundaries of acquisition")
-@click.option("--year", type=int, required=True, default=2020, help="year of interest")
-@click.option("--output-dir", type=str, required=True, help="output data directory")
+@click.option("--epsg", type=int, required=True, help="target epsg code")
+@click.option("--year", type=int, required=True, help="year of tile to use")
+@click.option("--resolution", type=int, required=True, help="spatial resolution (m)")
+@click.option("--output-dir", type=str, required=True, help="output directory")
 @click.option(
     "--overwrite", is_flag=True, default=False, help="overwrite existing files"
 )
-def download(
+def generate_land_cover(
     extent: str,
-    year: int,
-    output_dir: str,
-    overwrite: bool,
-):
-    """Download Copernicus GLC."""
-    print("DOWNLOAD OK")
-
-
-@cli.command()
-@click.option("--extent", type=str, required=True, help="boundaries of acquisition")
-@click.option("--year", type=int, required=True, default=2020, help="year of interest")
-@click.option("--resolution", type=int, default=100, help="spatial resolution (m)")
-@click.option("--crs", type=int, help="CRS id")
-@click.option("--output_dir", type=str, help="output data directory")
-@click.option("--input-dir", type=str, required=True, help="input data directory")
-@click.option(
-    "--overwrite", is_flag=True, default=False, help="overwrite existing files"
-)
-def process(
-    extent: str,
+    epsg: int,
     year: int,
     resolution: int,
-    crs: int,
-    output_dir: str,
-    input_dir: str,
+    output_dir: int,
     overwrite: bool,
 ):
-    pass
+    logger.info(f"generate_land_cover() starting, output_dir {output_dir}")
+
+    # create temporary workdir, if it is not existing
+    os.makedirs(WORK_DIR, exist_ok=True)
+
+    # since we are using CRS 4326, which is in degree, not meter -> cast
+    # resolution in something else. use equator length / 360°
+    resolution /= 40075017 / 360.0
+
+    # download tiles
+    target_geometry = utils.parse_extent(extent)
+    tiles = download(target_geometry, year)
+
+    # geo stuff
+    land_cover = merge_tiles(tiles)
+    land_cover_proj = reproject(target_geometry, land_cover, epsg, resolution)
+
+    # upload results
+    dst_land_cover = os.path.join(output_dir, "land_cover.tif")
+    utils.upload_file(land_cover_proj, dst_land_cover, overwrite)
+    logger.info("generate_land_cover() finished")
 
 
 if __name__ == "__main__":
