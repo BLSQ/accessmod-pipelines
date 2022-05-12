@@ -37,9 +37,17 @@ def cli():
     envvar="HEALTHSITES_TOKEN",
     help="healthsites api token",
 )
+@click.option(
+    "--webhook-url",
+    type=str,
+    help="URL to push a POST request with the acquisition's results",
+)
+@click.option("--webhook-token", type=str, help="Token to use in the webhook POST")
 def download_healthsites(
     config: str,
     token: str,
+    webhook_url: str,
+    webhook_token: str,
 ):
     """Download list of health facilities for accessmod analysis"""
     config = json.loads(base64.b64decode(config))
@@ -116,6 +124,16 @@ def download_healthsites(
     df.to_file(local_file, driver="GPKG")
     utils.upload_file(
         local_file, config["health_facilities"]["path"], config["overwrite"]
+    )
+    utils.call_webhook(
+        event_type="acquisition_completed",
+        data={
+            "acquisition_type": "health_facilities",
+            "uri": config["health_facilities"]["path"],
+            "mimetypes": "application/geopackage+sqlite3",
+        },
+        url=webhook_url,
+        token=webhook_token,
     )
 
 

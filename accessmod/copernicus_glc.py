@@ -130,8 +130,16 @@ def cli():
 
 @cli.command()
 @click.option("--config", type=str, required=True, help="pipeline configuration")
+@click.option(
+    "--webhook-url",
+    type=str,
+    help="URL to push a POST request with the acquisition's results",
+)
+@click.option("--webhook-token", type=str, help="Token to use in the webhook POST")
 def generate_land_cover(
     config: str,
+    webhook_url: str,
+    webhook_token: str,
 ):
     logger.info("generate_land_cover() starting")
     config = json.loads(base64.b64decode(config))
@@ -150,6 +158,16 @@ def generate_land_cover(
     )
     utils.upload_file(
         land_cover_proj, config["land_cover"]["path"], config["overwrite"]
+    )
+    utils.call_webhook(
+        event_type="acquisition_completed",
+        data={
+            "acquisition_type": "land_cover",
+            "uri": config["land_cover"]["path"],
+            "mimetypes": "image/geotiff",
+        },
+        url=webhook_url,
+        token=webhook_token,
     )
     logger.info("generate_land_cover() finished")
 

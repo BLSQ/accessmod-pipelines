@@ -89,7 +89,13 @@ def cli():
 
 @cli.command()
 @click.option("--config", type=str, required=True, help="pipeline configuration")
-def extract_from_osm(config: str):
+@click.option(
+    "--webhook-url",
+    type=str,
+    help="URL to push a POST request with the acquisition's results",
+)
+@click.option("--webhook-token", type=str, help="Token to use in the webhook POST")
+def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
     logger.info("extract_from_osm() make work dir")
     config = json.loads(base64.b64decode(config))
 
@@ -137,6 +143,16 @@ def extract_from_osm(config: str):
         utils.upload_file(
             transport_file, config["transport_network"]["path"], config["overwrite"]
         )
+        utils.call_webhook(
+            event_type="acquisition_completed",
+            data={
+                "acquisition_type": "transport_network",
+                "uri": config["transport_network"]["path"],
+                "mimetypes": "application/geopackage+sqlite3",
+            },
+            url=webhook_url,
+            token=webhook_token,
+        )
 
     if config["water"]["auto"]:
         logger.info("extract_from_osm() water")
@@ -149,7 +165,16 @@ def extract_from_osm(config: str):
             ["waterway", "natural", "water", "wetland", "boat"],
         )
         utils.upload_file(water_file, config["water"]["path"], config["overwrite"])
-
+        utils.call_webhook(
+            event_type="acquisition_completed",
+            data={
+                "acquisition_type": "water",
+                "uri": config["water"]["path"],
+                "mimetypes": "application/geopackage+sqlite3",
+            },
+            url=webhook_url,
+            token=webhook_token,
+        )
     logger.info("extract_from_osm() finished")
 
 

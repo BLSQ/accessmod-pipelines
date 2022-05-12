@@ -227,6 +227,27 @@ def random_string(length=16):
     return "".join(random.choice(chars) for i in range(length))
 
 
+def call_webhook(event_type: str, data: dict, url: str = None, token: str = None):
+    if not url or not token:
+        return
+
+    if event_type not in ["status_update", "acquisition_completed"]:
+        raise ValueError(f"Webhook event_type {event_type} invalid.")
+
+    r = requests.post(
+        url,
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "id": str(uuid.uuid4()),
+            "object": "event",
+            "created": datetime.timestamp(datetime.utcnow()),
+            "type": event_type,
+            "data": data,
+        },
+    )
+    r.raise_for_status()
+
+
 def status_update(status: str, data: dict, url: str = None, token: str = None):
     """Update analysis status with webhook."""
     if not url or not token:
@@ -244,18 +265,7 @@ def status_update(status: str, data: dict, url: str = None, token: str = None):
         raise ValueError(f"Analysis status {status} invalid.")
     data["status"] = status
 
-    r = requests.post(
-        url,
-        headers={"Authorization": f"Bearer {token}"},
-        json={
-            "id": str(uuid.uuid4()),
-            "object": "event",
-            "created": datetime.timestamp(datetime.utcnow()),
-            "type": "status_update",
-            "data": data,
-        },
-    )
-    r.raise_for_status()
+    call_webhook(event_type="status_update", data=data, url=url, token=token)
 
 
 def parse_config(string) -> dict:

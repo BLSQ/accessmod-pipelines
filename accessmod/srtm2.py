@@ -237,10 +237,18 @@ def cli():
     help="earthdata password",
 )
 @click.option("--config", type=str, required=True, help="pipeline configuration")
+@click.option(
+    "--webhook-url",
+    type=str,
+    help="URL to push a POST request with the acquisition's results",
+)
+@click.option("--webhook-token", type=str, help="Token to use in the webhook POST")
 def compute_dem(
     username: str,
     password: str,
     config: str,
+    webhook_url: str,
+    webhook_token: str,
 ):
     logger.info("compute_dem() starting")
     config = json.loads(base64.b64decode(config))
@@ -260,6 +268,17 @@ def compute_dem(
         target_geometry, dem_file, config["crs"], config["spatial_resolution"]
     )
     utils.upload_file(dem_proj_file, config["dem"]["path"], config["overwrite"])
+    utils.call_webhook(
+        event_type="acquisition_completed",
+        data={
+            "acquisition_type": "dem",
+            "uri": config["dem"]["path"],
+            "mimetypes": "image/geotiff",
+        },
+        url=webhook_url,
+        token=webhook_token,
+    )
+
     logger.info("compute_dem() finished")
 
 
