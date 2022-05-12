@@ -1,0 +1,78 @@
+{
+    "output-dir": "",
+    "dem": {
+        "download": false,
+        "path": "dem.tif",
+        "name": "dem"
+    },
+    "stack": {
+        "enabled": false,
+        "path": "stack.tif",
+        "labels": {},
+        "name": "stack"
+    },
+    "land-cover": {
+        "enabled": true,
+        "download": false,
+        "path": "landcover.tif",
+        "labels": {
+            "1": "Built_area",
+            "2": "Low_dense_vegetation",
+            "3": "Dense_vegetation"
+        },
+        "name": "land-cover"
+    },
+    "transport-network": {
+        "enabled": true,
+        "download": false,
+        "path": "roads.gpkg",
+        "category-column": "label",
+        "name": "transport-network"
+    },
+    "barriers": [
+        {
+            "path": "wetlands.gpkg",
+            "all-touched": false,
+            "name": "wetlands"
+        }
+    ],
+    "water": {
+        "enabled": true,
+        "download": false,
+        "path": "rivers.gpkg",
+        "name": "water",
+        "all-touched": true
+    },
+    "health-facilities": {
+        "enabled": true,
+        "download": false,
+        "path": "facilities.gpkg",
+        "name": "health-facilities"
+    },
+    "priorities": [
+        {
+            "name": "transport-network"
+        },
+        {
+            "name": "water"
+        },
+        {
+            "name": "wetlands"
+        },
+        {
+            "name": "land-cover"
+        }
+    ],
+    "moving-speeds": {
+        "Built_area": 6,
+        "Low_dense_vegetation": 4,
+        "Dense_vegetation": 2,
+        "Main road": 100,
+        "Secondary": 80,
+        "Teriary": 50
+    },
+    "algorithm": "isotropic",
+    "knight-move": false,
+    "invert-direction": false,
+    "max-travel-time": 360
+}

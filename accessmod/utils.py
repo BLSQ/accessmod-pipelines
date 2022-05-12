@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 import os
@@ -8,14 +9,10 @@ import zipfile
 from datetime import datetime
 from typing import List
 
+import fsspec
 import pandas as pd
 import requests
 from appdirs import user_cache_dir
-from fsspec import AbstractFileSystem
-from fsspec.implementations.http import HTTPFileSystem
-from fsspec.implementations.local import LocalFileSystem
-from gcsfs import GCSFileSystem
-from s3fs import S3FileSystem
 from shapely.geometry import Polygon, shape
 
 logging.basicConfig(
@@ -24,6 +21,9 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+APP_NAME = "AccessMod"
+APP_AUTHOR = "Bluesquare"
 
 
 def to_iso_a2(iso_a3: str) -> str:
@@ -194,24 +194,43 @@ def _human_readable_size(size, decimals=1):
     return f"{size:.{decimals}f} {unit}"
 
 
-def filesystem(target_path: str) -> AbstractFileSystem:
-    """Guess filesystem based on path"""
-    client_kwargs = {}
+def filesystem(target_path: str, cache: bool = False) -> fsspec.AbstractFileSystem:
+    """Guess filesystem based on path.
+
+    Parameters
+    ----------
+    target_path : str
+        Target file path starting with protocol.
+    cache : bool, optional
+        Cache remote file locally (default=False).
+
+    Return
+    ------
+    AbstractFileSystem
+        Local, S3, or GCS filesystem. WholeFileCacheFileSystem if
+        cache=True.
+    """
     if "://" in target_path:
         target_protocol = target_path.split("://")[0]
-        if target_protocol == "s3":
-            fs_class = S3FileSystem
-            client_kwargs = {"endpoint_url": os.environ.get("AWS_S3_ENDPOINT")}
-        elif target_protocol == "gcs":
-            fs_class = GCSFileSystem
-        elif target_protocol == "http" or target_protocol == "https":
-            fs_class = HTTPFileSystem
-        else:
-            raise ValueError(f"Protocol {target_protocol} not supported.")
     else:
-        fs_class = LocalFileSystem
+        target_protocol = "file"
 
-    return fs_class(client_kwargs=client_kwargs)
+    if target_protocol not in ("file", "s3", "gcs"):
+        raise ValueError(f"Protocol {target_protocol} not supported.")
+
+    client_kwargs = {}
+    if target_protocol == "s3":
+        client_kwargs = {"endpoint_url": os.environ.get("AWS_S3_ENDPOINT")}
+
+    if cache:
+        return fsspec.filesystem(
+            protocol="filecache",
+            target_protocol=target_protocol,
+            target_options={"client_kwargs": client_kwargs},
+            cache_storage=user_cache_dir(appname=APP_NAME, appauthor=APP_AUTHOR),
+        )
+    else:
+        return fsspec.filesystem(protocol=target_protocol, client_kwargs=client_kwargs)
 
 
 def random_string(length=16):
@@ -248,6 +267,23 @@ def status_update(status: str, data: dict, url: str = None, token: str = None):
         },
     )
     r.raise_for_status()
+
+
+def parse_config(string) -> dict:
+    """Parse config option from CLI.
+
+    Can be a path to a JSON file or a base 64 encoded JSON string. Parsed into a
+    dictionary.
+    """
+    if string.endswith(".json"):
+        fs = filesystem(string)
+        with fs.open(string) as f:
+            logger.info(f"Loading config from file {string}")
+            return json.load(f)
+
+    else:
+        logger.info("Loading config from string")
+        return json.loads(base64.b64decode(string.encode()).decode())
 
 
 def upload_file(src_file: str, dst_file: str, overwrite: bool):
