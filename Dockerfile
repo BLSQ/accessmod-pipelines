@@ -39,6 +39,8 @@ COPY docker-entrypoint.sh \
   copernicus_glc.py \
   cgls_bounding_boxes.json \
   countries_pbf.json \
+  errors.py \
+  layer.py \
   /app/
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
