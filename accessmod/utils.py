@@ -43,18 +43,7 @@ def country_is_valid(country_code: str) -> bool:
 
 
 def parse_extent(extent) -> Polygon:
-    coords = extent.strip().split(",")
-    assert len(coords) == 4, "extent must be formated as lng1,lat1,lng2,lat2"
-    lng1, lat1, lng2, lat2 = [float(x) for x in coords]
-    return Polygon(
-        [
-            [lng1, lat1],
-            [lng2, lat1],
-            [lng2, lat2],
-            [lng1, lat2],
-            [lng1, lat1],
-        ]
-    )
+    return Polygon(extent)
 
 
 def country_geometry(country_code: str, use_cache=True) -> Polygon:

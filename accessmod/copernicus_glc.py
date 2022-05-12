@@ -16,6 +16,8 @@ https://s3-eu-west-1.amazonaws.com/vito.landcover.global/v3.0.1/2019/E000N40/E00
 
 """
 
+import base64
+import json
 import logging
 import os
 from typing import List
@@ -56,7 +58,7 @@ def download(target_geom: BaseGeometry, year: int) -> List[str]:
     bounding_boxes = gpd.read_file(bounding_boxes_file, driver="GeoJSON")
     tiles = bounding_boxes[bounding_boxes.intersects(target_geom)]
     if tiles.empty:
-        raise ValueError("No SRTM tile found for the area of interest.")
+        raise ValueError("No GLC tile found for the area of interest.")
     logger.info(f"download() found {len(tiles)} CGLS tiles to cover target.")
 
     fs = utils.filesystem("s3://a-bucket/")
@@ -127,42 +129,28 @@ def cli():
 
 
 @cli.command()
-@click.option("--extent", type=str, required=True, help="boundaries of acquisition")
-@click.option("--epsg", type=int, required=True, help="target epsg code")
-@click.option("--year", type=int, required=True, help="year of tile to use")
-@click.option("--resolution", type=int, required=True, help="spatial resolution (m)")
-@click.option("--output-dir", type=str, required=True, help="output directory")
-@click.option(
-    "--overwrite", is_flag=True, default=False, help="overwrite existing files"
-)
+@click.option("--config", type=str, required=True, help="pipeline configuration")
 def generate_land_cover(
-    extent: str,
-    epsg: int,
-    year: int,
-    resolution: int,
-    output_dir: int,
-    overwrite: bool,
+    config: str,
 ):
-    logger.info(f"generate_land_cover() starting, output_dir {output_dir}")
+    logger.info("generate_land_cover() starting")
+    config = json.loads(base64.b64decode(config))
 
     # create temporary workdir, if it is not existing
     os.makedirs(WORK_DIR, exist_ok=True)
 
-    # since we are using CRS 4326, which is in degree, not meter -> cast
-    # resolution in something else. use equator length / 360°
-    resolution /= 40075017 / 360.0
-
     # download tiles
-    target_geometry = utils.parse_extent(extent)
-    tiles = download(target_geometry, year)
+    target_geometry = utils.parse_extent(config["extent"])
+    tiles = download(target_geometry, config["land_cover"]["year"])
 
     # geo stuff
     land_cover = merge_tiles(tiles)
-    land_cover_proj = reproject(target_geometry, land_cover, epsg, resolution)
-
-    # upload results
-    dst_land_cover = os.path.join(output_dir, "land_cover.tif")
-    utils.upload_file(land_cover_proj, dst_land_cover, overwrite)
+    land_cover_proj = reproject(
+        target_geometry, land_cover, config["crs"], config["spatial_resolution"]
+    )
+    utils.upload_file(
+        land_cover_proj, config["land_cover"]["path"], config["overwrite"]
+    )
     logger.info("generate_land_cover() finished")
 
 

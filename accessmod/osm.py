@@ -1,3 +1,5 @@
+import base64
+import json
 import logging
 import os
 import subprocess
@@ -86,20 +88,14 @@ def cli():
 
 
 @cli.command()
-@click.option("--extent", type=str, required=True, help="boundaries of acquisition")
-@click.option("--output-dir", type=str, required=True, help="output data directory")
-@click.option(
-    "--overwrite", is_flag=True, default=False, help="overwrite existing files"
-)
-def extract_from_osm(
-    extent: str,
-    output_dir: str,
-    overwrite: bool,
-):
+@click.option("--config", type=str, required=True, help="pipeline configuration")
+def extract_from_osm(config: str):
     logger.info("extract_from_osm() make work dir")
+    config = json.loads(base64.b64decode(config))
+
     os.makedirs(WORK_DIR, exist_ok=True)
 
-    target_geometry = utils.parse_extent(extent)
+    target_geometry = utils.parse_extent(config["extent"])
     all_countries = gpd.read_file("countries_pbf.json")
     all_countries["localpath"] = ""
     all_countries["localpbf"] = all_countries["pbf"].apply(
@@ -116,42 +112,44 @@ def extract_from_osm(
         open(localpath, "wb").write(r.content)
         logger.info("Downloaded %s to %s", country["pbf"], localpath)
 
-    transport_file = os.path.join(WORK_DIR, "transport.gpkg")
-    extract_pbf(
-        list(countries.localpath),
-        transport_file,
-        target_geometry,
-        ["w/highway", "w/route=ferry"],
-        [
-            "highway",
-            "smoothness",
-            "surface",
-            "tracktype",
-            "route",
-            "duration",
-            "motor_vehicle",
-            "motorcar",
-            "motorcycle",
-            "bicycle",
-            "foot",
-        ],
-    )
+    if config["transport_network"]["auto"]:
+        logger.info("extract_from_osm() transport_network")
+        transport_file = os.path.join(WORK_DIR, "transport.gpkg")
+        extract_pbf(
+            list(countries.localpath),
+            transport_file,
+            target_geometry,
+            ["w/highway", "w/route=ferry"],
+            [
+                "highway",
+                "smoothness",
+                "surface",
+                "tracktype",
+                "route",
+                "duration",
+                "motor_vehicle",
+                "motorcar",
+                "motorcycle",
+                "bicycle",
+                "foot",
+            ],
+        )
+        utils.upload_file(
+            transport_file, config["transport_network"]["path"], config["overwrite"]
+        )
 
-    water_file = os.path.join(WORK_DIR, "water.gpkg")
-    extract_pbf(
-        list(countries.localpath),
-        water_file,
-        target_geometry,
-        ["nwr/natural=water", "nwr/waterway", "nwr/water"],
-        ["waterway", "natural", "water", "wetland", "boat"],
-    )
+    if config["water"]["auto"]:
+        logger.info("extract_from_osm() water")
+        water_file = os.path.join(WORK_DIR, "water.gpkg")
+        extract_pbf(
+            list(countries.localpath),
+            water_file,
+            target_geometry,
+            ["nwr/natural=water", "nwr/waterway", "nwr/water"],
+            ["waterway", "natural", "water", "wetland", "boat"],
+        )
+        utils.upload_file(water_file, config["water"]["path"], config["overwrite"])
 
-    logger.info("extract_from_osm() upload")
-
-    rem_transport_file = os.path.join(output_dir, "transport.gpkg")
-    rem_water_file = os.path.join(output_dir, "water.gpkg")
-    utils.upload_file(transport_file, rem_transport_file, overwrite)
-    utils.upload_file(water_file, rem_water_file, overwrite)
     logger.info("extract_from_osm() finished")
 
 

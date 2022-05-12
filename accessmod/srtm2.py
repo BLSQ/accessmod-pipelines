@@ -9,6 +9,8 @@ Notes:
    https://urs.earthdata.nasa.gov/users/new
 """
 
+import base64
+import json
 import logging
 import os
 from io import BytesIO
@@ -25,8 +27,7 @@ import requests
 import utils
 from appdirs import user_cache_dir
 from bs4 import BeautifulSoup
-from osgeo import gdal
-from processing import GDAL_CREATION_OPTIONS, RASTERIO_DEFAULT_PROFILE
+from processing import RASTERIO_DEFAULT_PROFILE
 from rasterio.crs import CRS
 from requests.adapters import HTTPAdapter
 from shapely.geometry.base import BaseGeometry
@@ -65,8 +66,11 @@ RETRY_ADAPTER = HTTPAdapter(
     )
 )
 
+# mirror for SRTM tiles
+TILE_PATH = "s3://hexa-demo-accessmod/SRTM-tiles/"
 
-def download(target_geom: BaseGeometry, username: str, password: str) -> List[str]:
+
+def download_src(target_geom: BaseGeometry, username: str, password: str) -> List[str]:
     # get a list of tiles to cover target geometry
     bounding_boxes_file = os.path.join(SRC_DIR, "srtm30m_bounding_boxes.json")
     bounding_boxes = gpd.read_file(bounding_boxes_file, driver="GeoJSON")
@@ -132,6 +136,46 @@ def download(target_geom: BaseGeometry, username: str, password: str) -> List[st
     return downloaded_tiles
 
 
+def download_mirror(target_geom: BaseGeometry) -> List[str]:
+    # get a list of tiles to cover target geometry
+    bounding_boxes_file = os.path.join(SRC_DIR, "srtm30m_bounding_boxes.json")
+    bounding_boxes = gpd.read_file(bounding_boxes_file, driver="GeoJSON")
+    tiles = bounding_boxes[bounding_boxes.intersects(target_geom)]
+    if tiles.empty:
+        raise ValueError("No SRTM tile found for the area of interest.")
+    logger.info(f"download() found {len(tiles)} SRTM tiles to cover target.")
+
+    fs = utils.filesystem("s3://a-bucket/")
+
+    # download a list of tiles
+    downloaded_tiles = []
+    for tile_code in tiles["dataFile"].values:
+        full_local_path = os.path.join(WORK_DIR, tile_code)
+        full_remote_path = os.path.join(TILE_PATH, tile_code)
+        logger.info(f"Download {tile_code}")
+
+        if not fs.exists(full_remote_path):
+            raise Exception(f"tile {tile_code} not found in {TILE_PATH}")
+
+        fd_remote = fs.open(full_remote_path, "rb")
+        fd_remote_data = fd_remote.read()
+
+        if tile_code.endswith(".zip"):
+            zip_tile = ZipFile(BytesIO(fd_remote_data))
+            zip_content = zip_tile.namelist()
+            assert len(zip_content) == 1, "incoherent zip tile"
+            tile_content = zip_tile.read(zip_content[0])
+        else:
+            tile_content = fd_remote_data
+
+        fd_local = open(full_local_path, "wb")
+        fd_local.write(tile_content)
+        downloaded_tiles.append(full_local_path)
+
+    logger.info(f"Downloaded {len(downloaded_tiles)} tiles from mirror")
+    return downloaded_tiles
+
+
 def merge_tiles(tiles: List[str]) -> str:
     dst_file = os.path.join(WORK_DIR, "mosaic.tif")
     with rasterio.open(tiles[0]) as src:
@@ -145,28 +189,6 @@ def merge_tiles(tiles: List[str]) -> str:
         dst.write(mosaic)
 
     logger.info(f"Merged {len(tiles)} tiles into mosaic {dst_file}.")
-    return dst_file
-
-
-def compute_slope(dem_file: str) -> str:
-    # NB: DEM is expected to be in WGS84.
-    dst_file = os.path.join(WORK_DIR, "slope.tif")
-    src_ds = gdal.Open(dem_file)
-    if src_ds is None:
-        raise Exception("comput_slope(): couldnt open dem tiff")
-
-    scale = None
-    if not src_ds.GetSpatialRef().IsProjected():
-        scale = 111120
-
-    options = gdal.DEMProcessingOptions(
-        format="GTiff",
-        scale=scale,
-        slopeFormat="degree",
-        creationOptions=GDAL_CREATION_OPTIONS,
-    )
-    gdal.DEMProcessing(dst_file, dem_file, "slope", options=options)
-    logger.info(f"Computed slope {dst_file} from DEM {dem_file}.")
     return dst_file
 
 
@@ -200,7 +222,6 @@ def cli():
 
 
 @cli.command()
-@click.option("--extent", type=str, required=True, help="boundaries of acquisition")
 @click.option(
     "--username",
     type=str,
@@ -215,46 +236,31 @@ def cli():
     envvar="EARTHDATA_PASSWORD",
     help="earthdata password",
 )
-@click.option("--epsg", type=int, required=True, help="target epsg code")
-@click.option("--resolution", type=int, required=True, help="spatial resolution (m)")
-@click.option("--output-dir", type=str, required=True, help="output directory")
-@click.option(
-    "--overwrite", is_flag=True, default=False, help="overwrite existing files"
-)
-def compute_dem_slope(
-    extent: str,
+@click.option("--config", type=str, required=True, help="pipeline configuration")
+def compute_dem(
     username: str,
     password: str,
-    epsg: int,
-    resolution: int,
-    output_dir: int,
-    overwrite: bool,
+    config: str,
 ):
-    logger.info(f"compute_dem_slope() starting, output_dir {output_dir}")
+    logger.info("compute_dem() starting")
+    config = json.loads(base64.b64decode(config))
 
     # create temporary workdir, if it is not existing
     os.makedirs(WORK_DIR, exist_ok=True)
 
     # download tiles
-    target_geometry = utils.parse_extent(extent)
-    tiles = download(target_geometry, username, password)
-
-    # since we are using CRS 4326, which is in degree, not meter -> cast
-    # resolution in something else. use equator length / 360°
-    resolution /= 40075017 / 360.0
+    target_geometry = utils.parse_extent(config["extent"])
+    # if you don't have access to blsq SRTM mirror: use download_src
+    # tiles = download_src(target_geometry, username, password)
+    tiles = download_mirror(target_geometry)
 
     # geo stuff
     dem_file = merge_tiles(tiles)
-    slope_file = compute_slope(dem_file)
-    dem_proj_file = reproject(target_geometry, dem_file, epsg, resolution)
-    slope_proj_file = reproject(target_geometry, slope_file, epsg, resolution)
-
-    # upload results
-    dst_dem_file = os.path.join(output_dir, "dem.tif")
-    utils.upload_file(dem_proj_file, dst_dem_file, overwrite)
-    dst_slope_file = os.path.join(output_dir, "slope.tif")
-    utils.upload_file(slope_proj_file, dst_slope_file, overwrite)
-    logger.info("compute_dem_slope() finished")
+    dem_proj_file = reproject(
+        target_geometry, dem_file, config["crs"], config["spatial_resolution"]
+    )
+    utils.upload_file(dem_proj_file, config["dem"]["path"], config["overwrite"])
+    logger.info("compute_dem() finished")
 
 
 if __name__ == "__main__":

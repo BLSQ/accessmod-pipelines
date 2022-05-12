@@ -1,3 +1,5 @@
+import base64
+import json
 import logging
 import math
 import os
@@ -27,11 +29,7 @@ def cli():
 
 
 @cli.command()
-@click.option("--extent", type=str, required=True, help="boundaries of acquisition")
-@click.option("--output-dir", type=str, required=True, help="output data directory")
-@click.option(
-    "--overwrite", is_flag=True, default=False, help="overwrite existing files"
-)
+@click.option("--config", type=str, required=True, help="pipeline configuration")
 @click.option(
     "--token",
     type=str,
@@ -39,16 +37,12 @@ def cli():
     envvar="HEALTHSITES_TOKEN",
     help="healthsites api token",
 )
-@click.option(
-    "--amenity",
-    type=str,
-    required=False,
-    help="filter health facilities by amenity property",
-)
 def download_healthsites(
-    extent: str, output_dir: str, overwrite: bool, token: str, amenity: str = None
+    config: str,
+    token: str,
 ):
     """Download list of health facilities for accessmod analysis"""
+    config = json.loads(base64.b64decode(config))
 
     def url_builder(endpoint, filters):
         url = "https://healthsites.io/api/v2" + endpoint + "?"
@@ -58,12 +52,15 @@ def download_healthsites(
     logger.info("Test token and download facilities list")
     os.makedirs(WORK_DIR, exist_ok=True)
 
+    target_geometry = utils.parse_extent(config["extent"])
+    str_bounds = ",".join([str(x) for x in target_geometry.bounds])
+
     r = requests.get(
         url_builder(
             "/facilities/count/",
             {
                 "api-key": token,
-                "extent": extent,
+                "extent": str_bounds,
             },
         )
     )
@@ -79,7 +76,7 @@ def download_healthsites(
                 "/facilities/",
                 {
                     "api-key": token,
-                    "extent": extent,
+                    "extent": str_bounds,
                     "page": page + 1,
                     #   "flat-properties": "false",
                 },
@@ -109,14 +106,17 @@ def download_healthsites(
         logger.info("Page %s downloaded", page)
 
     df = gpd.GeoDataFrame(dataset)
-    if amenity:
-        df = df[df.amenity == amenity]
+    df = df[df.intersects(target_geometry)]
+    if config["health_facilities"]["amenity"]:
+        df = df[df.amenity == config["health_facilities"]["amenity"]]
+    df = df.reset_index(drop=True)
 
     # upload results
     local_file = os.path.join(WORK_DIR, "facilities.gpkg")
-    dst_file = os.path.join(output_dir, "facilities.gpkg")
     df.to_file(local_file, driver="GPKG")
-    utils.upload_file(local_file, dst_file, overwrite)
+    utils.upload_file(
+        local_file, config["health_facilities"]["path"], config["overwrite"]
+    )
 
 
 if __name__ == "__main__":
