@@ -72,64 +72,84 @@ def accessibility(
     )
 
     config = parse_config(config)
+    logger.info("Parsed JSON configuration")
 
     dem = ElevationLayer(filepath=config["dem"]["path"])
+    logger.info(f"Using DEM from {config['dem']['path']}")
 
     # stack is provided by the user
-    if config["stack"].get("enabled"):
-        stack = StackLayer(
-            filepath=config["stack"]["path"], labels=config["stack"]["labels"]
-        )
-    # stack is not provided by the user but is generated from available
-    # geographic layers
+    layer = config["stack"]
+
+    # stack is provided by the user (auto=False)
+    if not config["stack"].get("auto"):
+        if not layer.get("labels"):
+            logger.warn("Missing labels for stack layer")
+        stack = StackLayer(filepath=layer["path"], labels=layer["labels"])
+        logger.info(f"Using stack from {layer['path']}")
+
+    # stack is produced from input geographic layers (auto=True)
     else:
         layers = []
 
+        # land cover (required if stack is not provided)
+        layer = config.get("land_cover")
+        if not layer:
+            raise AccessModError("Missing land cover layer")
         layers.append(
             LandCoverLayer(
-                filepath=config["land-cover"]["path"],
-                labels=config["land-cover"]["labels"],
-                name=config["land-cover"].get("name", "land-cover"),
+                filepath=layer["path"],
+                labels=layer["labels"],
+                name=layer.get("name", "Land cover"),
             )
         )
+        logger.info(f"Using land cover from {layer['path']}")
 
-        if config["transport-network"].get("enabled"):
+        # transport network (optional)
+        layer = config.get("transport_network")
+        if layer:
             layers.append(
                 TransportNetworkLayer(
-                    filepath=config["transport-network"]["path"],
-                    category_column=config["transport-network"]["category-column"],
-                    name=config["transport-network"].get("name", "transport-network"),
+                    filepath=layer["path"],
+                    category_column=layer["category_column"],
+                    name=layer.get("name", "Transport network"),
                 )
             )
+            logger.info(f"Using transport network from {layer['path']}")
 
-        if config["water"].get("enabled"):
+        # water (optional)
+        layer = config.get("water")
+        if layer:
             layers.append(
                 WaterLayer(
-                    filepath=config["water"]["path"],
-                    all_touched=config["water"].get("all-touched"),
-                    name=config["water"].get("name"),
+                    filepath=layer["path"],
+                    all_touched=layer.get("all_touched", True),
+                    name=layer.get("name", "water"),
                 )
             )
+            logger.info(f"Using water from {layer['path']}")
 
-        for barrier in config["barriers"]:
+        # barriers (optional)
+        for barrier in config.get("barriers"):
             layers.append(
                 BarrierLayer(
                     filepath=barrier["path"],
-                    all_touched=barrier.get("all-touched"),
+                    all_touched=barrier.get("all_touched", False),
                     name=barrier.get("name"),
                 )
             )
+            logger.info(f"Using barrier from {barrier['path']}")
 
         stack = StackLayer(
             filepath=config["stack"]["path"],
             layers=layers,
             priorities=config["priorities"],
         )
+        logger.info(f"Generated stack from {len(layers)} layers")
 
         stack.write(overwrite=config.get("overwrite"))
 
     analysis = AccessibilityAnalysis(
-        dem=dem, stack=stack, output_dir=config["output-dir"]
+        dem=dem, stack=stack, output_dir=config["output_dir"]
     )
 
     if config["algorithm"].lower() == "isotropic":
@@ -147,7 +167,7 @@ def accessibility(
         dst_file = os.path.join(tmp_dir, "friction.tif")
         friction = analysis.friction_surface(
             dst_file=dst_file,
-            moving_speeds=config["moving-speeds"],
+            moving_speeds=config["moving_speeds"],
             unit_meters=algorithm.value == 2,
         )
         logger.info(f"Friction surface written to {dst_file}")
@@ -155,14 +175,14 @@ def accessibility(
         logger.info("Started cost distance analysis")
         cost, nearest = analysis.cost_distance(
             friction=friction,
-            health_facilities=config["health-facilities"]["path"],
-            dst_dir=config["output-dir"],
+            health_facilities=config["health_facilities"]["path"],
+            dst_dir=config["output_dir"],
             algorithm=algorithm,
-            knight_move=config.get("knight-move"),
-            max_cost=config.get("max-travel-time", 360) * 60,
+            knight_move=config.get("knight_move"),
+            max_cost=config.get("max_travel_time", 360) * 60,
             overwrite=config.get("overwrite"),
         )
-        logger.info(f"Travel times written into {config['output-dir']}")
+        logger.info(f"Travel times written into {config['output_dir']}")
 
     if webhook_url and webhook_token:
         status_update(
