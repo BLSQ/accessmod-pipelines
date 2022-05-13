@@ -275,7 +275,7 @@ def compute_dem(
         data={
             "acquisition_type": "dem",
             "uri": config["dem"]["path"],
-            "mimetypes": "image/geotiff",
+            "mime_type": "image/geotiff",
         },
         url=webhook_url,
         token=webhook_token,

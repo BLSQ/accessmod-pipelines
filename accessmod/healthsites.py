@@ -130,7 +130,7 @@ def download_healthsites(
         data={
             "acquisition_type": "health_facilities",
             "uri": config["health_facilities"]["path"],
-            "mimetypes": "application/geopackage+sqlite3",
+            "mime_type": "application/geopackage+sqlite3",
         },
         url=webhook_url,
         token=webhook_token,

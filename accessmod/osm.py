@@ -170,7 +170,7 @@ def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
             data={
                 "acquisition_type": "water",
                 "uri": config["water"]["path"],
-                "mimetypes": "application/geopackage+sqlite3",
+                "mime_type": "application/geopackage+sqlite3",
             },
             url=webhook_url,
             token=webhook_token,

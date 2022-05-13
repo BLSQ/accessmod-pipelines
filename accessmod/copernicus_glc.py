@@ -164,7 +164,7 @@ def generate_land_cover(
         data={
             "acquisition_type": "land_cover",
             "uri": config["land_cover"]["path"],
-            "mimetypes": "image/geotiff",
+            "mime_type": "image/geotiff",
         },
         url=webhook_url,
         token=webhook_token,
