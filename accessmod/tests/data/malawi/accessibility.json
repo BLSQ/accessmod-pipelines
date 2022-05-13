@@ -1,19 +1,18 @@
 {
-    "output-dir": "",
+    "output_dir": "",
     "dem": {
-        "download": false,
+        "auto": false,
         "path": "dem.tif",
         "name": "dem"
     },
     "stack": {
-        "enabled": false,
+        "auto": true,
         "path": "stack.tif",
         "labels": {},
         "name": "stack"
     },
-    "land-cover": {
-        "enabled": true,
-        "download": false,
+    "land_cover": {
+        "auto": false,
         "path": "landcover.tif",
         "labels": {
             "1": "Built_area",
@@ -22,30 +21,27 @@
         },
         "name": "land-cover"
     },
-    "transport-network": {
-        "enabled": true,
-        "download": false,
+    "transport_network": {
+        "auto": false,
         "path": "roads.gpkg",
-        "category-column": "label",
+        "category_column": "label",
         "name": "transport-network"
     },
     "barriers": [
         {
             "path": "wetlands.gpkg",
-            "all-touched": false,
+            "all_touched": false,
             "name": "wetlands"
         }
     ],
     "water": {
-        "enabled": true,
-        "download": false,
+        "auto": false,
         "path": "rivers.gpkg",
         "name": "water",
-        "all-touched": true
+        "all_touched": true
     },
-    "health-facilities": {
-        "enabled": true,
-        "download": false,
+    "health_facilities": {
+        "auto": false,
         "path": "facilities.gpkg",
         "name": "health-facilities"
     },
@@ -63,7 +59,7 @@
             "name": "land-cover"
         }
     ],
-    "moving-speeds": {
+    "moving_speeds": {
         "Built_area": 6,
         "Low_dense_vegetation": 4,
         "Dense_vegetation": 2,
@@ -72,7 +68,7 @@
         "Teriary": 50
     },
     "algorithm": "isotropic",
-    "knight-move": false,
-    "invert-direction": false,
-    "max-travel-time": 360
+    "knight_move": false,
+    "invert_direction": false,
+    "max_travel_time": 360
 }

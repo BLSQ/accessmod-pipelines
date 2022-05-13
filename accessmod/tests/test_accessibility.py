@@ -19,10 +19,10 @@ def test_accessibility():
 
     with tempfile.TemporaryDirectory(prefix="AccessMod_") as tmp_dir:
 
-        config["output-dir"] = tmp_dir
+        config["output_dir"] = tmp_dir
 
         # update file paths in config
-        for layer in ("land-cover", "transport-network", "water", "health-facilities"):
+        for layer in ("land_cover", "transport_network", "water", "health_facilities"):
             config[layer]["path"] = os.path.join(
                 data_dir, "input", config[layer]["path"]
             )
