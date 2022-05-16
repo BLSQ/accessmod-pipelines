@@ -97,7 +97,15 @@ def cli():
 @click.option("--webhook-token", type=str, help="Token to use in the webhook POST")
 def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
     logger.info("extract_from_osm() make work dir")
-    config = json.loads(base64.b64decode(config))
+
+    # config is a json file
+    if config.endswith(".json"):
+        fs = utils.filesystem(config)
+        with fs.open(config) as f:
+            config = json.load(f)
+    # config is base64 encoded json string
+    else:
+        config = json.loads(base64.b64decode(config))
 
     os.makedirs(WORK_DIR, exist_ok=True)
 
