@@ -66,11 +66,11 @@ def extract_pbf(
     area_of_interest : shapely polygon
         Geographic area of interest.
     expressions : list of str
-        Sequence of OSM tag filter expressions (e.g. "w/highway").
+        OSM tag filter expression (e.g. "w/highway").
     properties : list of str
         List of OSM tags to keep as column in the output .gpkg.
     geom_type : str, optional
-        Geometry type (e.g. LineString, Polygon...)
+        Geometry type (e.g. LineString or Polygon)
 
     Return
     ------
@@ -90,6 +90,10 @@ def extract_pbf(
         "geometry": geom_type,
     }
 
+    # we will convert Polygon to MultiPolygon anyway
+    if dst_schema.get("geometry") == "Polygon":
+        dst_schema.update(geometry="MultiPolygon")
+
     fs_in = utils.filesystem(src_files[0])
     fs_out = utils.filesystem(dst_file)
 
@@ -97,23 +101,23 @@ def extract_pbf(
 
         dst_file_tmp = os.path.join(tmp_dir, os.path.basename(dst_file))
 
-        for i, src_file in enumerate(src_files):
+        for src_file_i, src_file in enumerate(src_files):
 
             src_file_tmp = os.path.join(tmp_dir, os.path.basename(src_file))
             fs_in.get(src_file, src_file_tmp)
 
-            for expression in expressions:
+            for expression_i, expression in enumerate(expressions):
 
                 filtered_fp = src_file_tmp.replace(".osm.pbf", "_filtered.osm.pbf")
                 geojson_fp = src_file_tmp.replace(".osm.pbf", ".geojson")
 
                 osmium(
                     "tags-filter",
-                    src_file_tmp,
-                    expression,
+                    "--overwrite",
                     "-o",
                     filtered_fp,
-                    "--overwrite",
+                    src_file_tmp,
+                    expression,
                 )
                 logger.info(f"Filtered {src_file_tmp} based on expression {expression}")
 
@@ -140,7 +144,7 @@ def extract_pbf(
 
                     # create a new gpkg if we are processing the first file, then
                     # append to existing one
-                    mode = "w" if i == 0 else "a"
+                    mode = "w" if src_file_i == 0 and expression_i == 0 else "a"
 
                     def match_schema(record: dict, dst_schema: dict) -> dict:
                         """Ensure that the Fiona record matches the target schema.
@@ -159,6 +163,16 @@ def extract_pbf(
                         record.update(properties=dst_properties)
                         return record
 
+                    def to_multipolygon(record: dict) -> dict:
+                        """Convert polygon record to multipolygon."""
+                        if record["geometry"].get("type") == "MultiPolygon":
+                            return record
+                        record["geometry"]["type"] = "MultiPolygon"
+                        record["geometry"]["coordinates"] = [
+                            record["geometry"]["coordinates"]
+                        ]
+                        return record
+
                     # we filter and write feature per feature in the destination
                     # gpkg to avoid memory issues in the largest areas of interest
                     n_records = 0
@@ -167,14 +181,19 @@ def extract_pbf(
                     ) as dst:
                         for record in src:
                             if "geometry" in record:
+                                if geom_type == "Polygon":
+                                    record = to_multipolygon(record)
                                 geom = shape(record["geometry"])
                                 if geom.intersects(area_of_interest):
                                     record = match_schema(record, dst_schema)
                                     dst.write(record)
                                     n_records += 1
+
                     logger.info(
-                        f"Written {n_records} records from {src_file_tmp} into {dst_file_tmp}"
+                        f"Written {n_records} records from {geojson_fp} into {dst_file_tmp}"
                     )
+                    fs_out.put(geojson_fp, f"osm/{os.path.basename(geojson_fp)}")
+                    fs_out.put(filtered_fp, f"osm/{os.path.basename(filtered_fp)}")
 
         fs_out.put(dst_file_tmp, dst_file)
         logger.info(f"Put {dst_file_tmp} into {dst_file}")
