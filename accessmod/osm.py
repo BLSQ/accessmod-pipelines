@@ -29,15 +29,18 @@ WORK_DIR = os.path.join(user_cache_dir("accessmod"), "OSM")
 
 
 def osmium(*args):
+    cmd = ["osmium"] + list(args)
     r = subprocess.run(
-        ["osmium"] + list(args),
+        cmd,
         check=True,
         text=True,
         capture_output=True,
     )
+    logger.info(" ".join(cmd))
     for line in r.stdout.split("\n"):
         # if it's here, process finished OK
-        logger.info(line)
+        if line:
+            logger.info(line)
 
 
 def extract_pbf(
