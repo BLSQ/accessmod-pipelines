@@ -195,8 +195,6 @@ def extract_pbf(
                     logger.info(
                         f"Written {n_records} records from {geojson_fp} into {dst_file_tmp}"
                     )
-                    fs_out.put(geojson_fp, f"osm/{os.path.basename(geojson_fp)}")
-                    fs_out.put(filtered_fp, f"osm/{os.path.basename(filtered_fp)}")
 
         fs_out.put(dst_file_tmp, dst_file)
         logger.info(f"Put {dst_file_tmp} into {dst_file}")
