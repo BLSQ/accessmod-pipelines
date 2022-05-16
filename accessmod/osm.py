@@ -96,6 +96,7 @@ def cli():
 )
 @click.option("--webhook-token", type=str, help="Token to use in the webhook POST")
 def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
+    """Download and extract transport network and water data from OpenStreetMap."""
     logger.info("extract_from_osm() make work dir")
 
     # config is a json file
