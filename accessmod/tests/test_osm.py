@@ -19,7 +19,7 @@ def test_osm():
 
         # update file paths in config
         for layer in ("transport_network", "water"):
-            config[layer]["path"] = os.path.join(data_dir, "osm", config[layer]["path"])
+            config[layer]["path"] = os.path.join(tmp_dir, "osm", config[layer]["path"])
 
         runner = CliRunner()
         result = runner.invoke(
