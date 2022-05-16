@@ -3,14 +3,18 @@ import json
 import logging
 import os
 import subprocess
+import tempfile
+from collections import OrderedDict
+from typing import Sequence
 
 import click
+import fiona
 import geopandas as gpd
-import pandas as pd
 import production  # noqa
 import requests
 import utils
 from appdirs import user_cache_dir
+from shapely.geometry import Polygon, shape
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
@@ -36,50 +40,146 @@ def osmium(*args):
         logger.info(line)
 
 
-def extract_pbf(pbfs, target_file, target_geo, expressions, properties):
-    logger.info("Starting thematic extraction of %s objects for %s", expressions, pbfs)
+def extract_pbf(
+    src_files: Sequence[str],
+    dst_file: str,
+    area_of_interest: Polygon,
+    expressions: Sequence[str],
+    properties: Sequence[str],
+    geom_type: str = "LineString",
+) -> str:
+    """Filter records from multiple .osm.pbf files based on location and tags.
 
-    geodfs = []
+    Records from each .osm.pbf file are filtered based on their tags and the
+    osmium tag expressions provided by the user. Records are then exported to
+    GeoJSON files and processed with Fiona to drop records outside of the area
+    of interest.pbfs
 
-    for pbf in pbfs:
-        for expression in expressions:
-            filtered_fn = pbf.replace(".osm.pbf", "") + ".filterd.osm.pbf"
-            json_fn = pbf.replace(".osm.pbf", "") + ".json"
-            # tag filter
-            osmium("tags-filter", pbf, expression, "-o", filtered_fn, "--overwrite")
-            logger.info("Tags filter %s for %s done", expression, pbf)
+    All valid records are merged into a final Geopackage.
 
-            # export to geojson
-            osmium("export", filtered_fn, "-o", json_fn, "--overwrite")
-            logger.info("Export %s done", pbf)
+    Parameters
+    ----------
+    src_files : list of str
+        Input .osm.pbf files.
+    dst_file : str
+        Output .gpkg gile.
+    area_of_interest : shapely polygon
+        Geographic area of interest.
+    expressions : list of str
+        Sequence of OSM tag filter expressions (e.g. "w/highway").
+    properties : list of str
+        List of OSM tags to keep as column in the output .gpkg.
+    geom_type : str, optional
+        Geometry type (e.g. LineString, Polygon...)
 
-            # import data + clean up
-            geodf = gpd.read_file(json_fn)
-            for column in geodf.columns:
-                if column not in properties and column != "geometry":
-                    tmp_geodf = geodf.drop([column], axis=1)
-                    del geodf
-                    geodf = tmp_geodf
-            geodf_min = geodf[
-                (geodf.geom_type == "LineString") & geodf.intersects(target_geo)
-            ]
-            del geodf
-            geodfs.append(geodf_min)
+    Return
+    ------
+    str
+        Path to output .gpkg file.
+    """
+    # minimal `osmium export` json config to drop unwanted attributes
+    osmium_export_config = {
+        "linear_tags": True,
+        "area_tags": True,
+        "include_tags": properties,
+    }
 
-    # concat all df into one big thing
-    ndf = pd.concat(geodfs, ignore_index=True)
-    del geodfs
-    geodf = gpd.GeoDataFrame(ndf)
-    del ndf
-    logger.info("Consolidation done, generated %s objects", len(geodf))
+    # schema of the output .gpkg file
+    dst_schema = {
+        "properties": OrderedDict({tag: "str" for tag in properties}),
+        "geometry": geom_type,
+    }
 
-    # post process geodf
-    geodf_final = geodf.reset_index(drop=True)
-    del geodf
-    geodf_final.crs = {"init": "epsg:4326"}
-    geodf_final.to_file(target_file, driver="GPKG")
-    del geodf_final
-    logger.info("Geodf dumped to %s", target_file)
+    fs_in = utils.filesystem(src_files[0])
+    fs_out = utils.filesystem(dst_file)
+
+    with tempfile.TemporaryDirectory(prefix="AccessMod_") as tmp_dir:
+
+        dst_file_tmp = os.path.join(tmp_dir, os.path.basename(dst_file))
+
+        for i, src_file in enumerate(src_files):
+
+            src_file_tmp = os.path.join(tmp_dir, os.path.basename(src_file))
+            fs_in.get(src_file, src_file_tmp)
+
+            for expression in expressions:
+
+                filtered_fp = src_file_tmp.replace(".osm.pbf", "_filtered.osm.pbf")
+                geojson_fp = src_file_tmp.replace(".osm.pbf", ".geojson")
+
+                osmium(
+                    "tags-filter",
+                    src_file_tmp,
+                    expression,
+                    "-o",
+                    filtered_fp,
+                    "--overwrite",
+                )
+                logger.info(f"Filtered {src_file_tmp} based on expression {expression}")
+
+                # osmium export needs some config options to be provided in a
+                # json file so we temporarily create one
+                with tempfile.NamedTemporaryFile(suffix=".json") as tmp_file:
+                    with open(tmp_file.name, "w") as f:
+                        json.dump(osmium_export_config, f)
+                    osmium(
+                        "export",
+                        filtered_fp,
+                        "-f",
+                        "json",
+                        f"--geometry-types={geom_type.lower()}",
+                        "-c",
+                        tmp_file.name,
+                        "-o",
+                        geojson_fp,
+                        "--overwrite",
+                    )
+                logger.info(f"Exported {filtered_fp} to {geojson_fp}")
+
+                with fiona.open(geojson_fp, driver="GeoJSON") as src:
+
+                    # create a new gpkg if we are processing the first file, then
+                    # append to existing one
+                    mode = "w" if i == 0 else "a"
+
+                    def match_schema(record: dict, dst_schema: dict) -> dict:
+                        """Ensure that the Fiona record matches the target schema.
+
+                        If a property is in the record but not available in the
+                        target schema, then the property is dropped. If the property
+                        is in the target schema but not in the record, then it is
+                        added to the record with None as value.
+                        """
+                        dst_properties = OrderedDict(
+                            {
+                                prop: record["properties"].get(prop)
+                                for prop in dst_schema["properties"]
+                            }
+                        )
+                        record.update(properties=dst_properties)
+                        return record
+
+                    # we filter and write feature per feature in the destination
+                    # gpkg to avoid memory issues in the largest areas of interest
+                    n_records = 0
+                    with fiona.open(
+                        dst_file_tmp, mode, driver="GPKG", schema=dst_schema
+                    ) as dst:
+                        for record in src:
+                            if "geometry" in record:
+                                geom = shape(record["geometry"])
+                                if geom.intersects(area_of_interest):
+                                    record = match_schema(record, dst_schema)
+                                    dst.write(record)
+                                    n_records += 1
+                    logger.info(
+                        f"Written {n_records} records from {src_file_tmp} into {dst_file_tmp}"
+                    )
+
+        fs_out.put(dst_file_tmp, dst_file)
+        logger.info(f"Put {dst_file_tmp} into {dst_file}")
+
+        return dst_file
 
 
 @click.group()
