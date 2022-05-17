@@ -77,76 +77,94 @@ def accessibility(
     dem = ElevationLayer(filepath=config["dem"]["path"])
     logger.info(f"Using DEM from {config['dem']['path']}")
 
-    # stack is provided by the user
-    layer = config["stack"]
+    layer = config.get("stack")
 
-    # stack is provided by the user (auto=False)
-    if not config["stack"].get("auto"):
-        if not layer.get("labels"):
-            logger.warn("Missing labels for stack layer")
-        stack = StackLayer(filepath=layer["path"], labels=layer["labels"])
-        logger.info(f"Using stack from {layer['path']}")
+    if not layer:
 
-    # stack is produced from input geographic layers (auto=True)
+        # stack cannot be null, it must be provided by the user or generated
+        # automatically
+        raise AccessModError("Stack layer is required")
+
     else:
-        layers = []
 
-        # land cover (required if stack is not provided)
-        layer = config.get("land_cover")
-        if not layer:
-            raise AccessModError("Missing land cover layer")
-        layers.append(
-            LandCoverLayer(
-                filepath=layer["path"],
-                labels=layer["labels"],
-                name=layer.get("name", "Land cover"),
-            )
-        )
-        logger.info(f"Using land cover from {layer['path']}")
+        # stack is generated automatically from various input geographic
+        # variables
+        if layer.get("auto"):
 
-        # transport network (optional)
-        layer = config.get("transport_network")
-        if layer:
+            # stack output path must be provided
+            if not layer.get("path"):
+                raise AccessModError("Missing output path for stack")
+
+            layers = []
+
+            # land cover (required if stack is not provided)
+            layer = config.get("land_cover")
+            if not layer:
+                raise AccessModError("Missing land cover layer")
             layers.append(
-                TransportNetworkLayer(
+                LandCoverLayer(
                     filepath=layer["path"],
-                    category_column=layer["category_column"],
-                    name=layer.get("name", "Transport network"),
+                    labels=layer["labels"],
+                    name=layer.get("name", "Land cover"),
                 )
             )
-            logger.info(f"Using transport network from {layer['path']}")
+            logger.info(f"Using land cover from {layer['path']}")
 
-        # water (optional)
-        layer = config.get("water")
-        if layer:
-            layers.append(
-                WaterLayer(
-                    filepath=layer["path"],
-                    all_touched=layer.get("all_touched", True),
-                    name=layer.get("name", "water"),
+            # transport network (optional)
+            layer = config.get("transport_network")
+            if layer:
+                layers.append(
+                    TransportNetworkLayer(
+                        filepath=layer["path"],
+                        category_column=layer["category_column"],
+                        name=layer.get("name", "Transport network"),
+                    )
                 )
-            )
-            logger.info(f"Using water from {layer['path']}")
+                logger.info(f"Using transport network from {layer['path']}")
 
-        # barriers (optional)
-        for barrier in config.get("barriers"):
-            layers.append(
-                BarrierLayer(
-                    filepath=barrier["path"],
-                    all_touched=barrier.get("all_touched", False),
-                    name=barrier.get("name"),
+            # water (optional)
+            layer = config.get("water")
+            if layer:
+                layers.append(
+                    WaterLayer(
+                        filepath=layer["path"],
+                        all_touched=layer.get("all_touched", True),
+                        name=layer.get("name", "water"),
+                    )
                 )
+                logger.info(f"Using water from {layer['path']}")
+
+            # barriers (optional)
+            for barrier in config.get("barriers"):
+                layers.append(
+                    BarrierLayer(
+                        filepath=barrier["path"],
+                        all_touched=barrier.get("all_touched", False),
+                        name=barrier.get("name"),
+                    )
+                )
+                logger.info(f"Using barrier from {barrier['path']}")
+
+            stack = StackLayer(
+                filepath=config["stack"]["path"],
+                layers=layers,
+                priorities=config["priorities"],
             )
-            logger.info(f"Using barrier from {barrier['path']}")
+            logger.info(f"Generated stack from {len(layers)} layers")
 
-        stack = StackLayer(
-            filepath=config["stack"]["path"],
-            layers=layers,
-            priorities=config["priorities"],
-        )
-        logger.info(f"Generated stack from {len(layers)} layers")
+            stack.write(overwrite=config.get("overwrite"))
 
-        stack.write(overwrite=config.get("overwrite"))
+        # stack is provided by the user
+        else:
+
+            # stack input path must be provided
+            if not layer.get("path"):
+                raise AccessModError("Missing input path for stack")
+
+            if not layer.get("labels"):
+                logger.warn("Missing labels for stack layer")
+            stack = StackLayer(filepath=layer["path"], labels=layer["labels"])
+            logger.info(f"Using stack from {layer['path']}")
 
     analysis = AccessibilityAnalysis(
         dem=dem, stack=stack, output_dir=config["output_dir"]
