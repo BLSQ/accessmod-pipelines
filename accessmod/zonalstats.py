@@ -52,11 +52,11 @@ def zonalstats(config: str, webhook_url: str, webhook_token: str):
 
     boundaries = BoundariesLayer(filepath=config["boundaries"]["path"])
     population = PopulationLayer(filepath=config["population"]["path"])
-    travel_times = TravelTimesLayer(filepath=config["travel-times"]["path"])
+    travel_times = TravelTimesLayer(filepath=config["travel_times"]["path"])
 
     pop = population_counts(boundaries, population)
     pop_time = time_stats(
-        travel_times, boundaries, population, levels=config["time-thresholds"]
+        travel_times, boundaries, population, levels=config["time_thresholds"]
     )
 
     report = boundaries.read().copy()
@@ -68,14 +68,14 @@ def zonalstats(config: str, webhook_url: str, webhook_token: str):
             report[f"PopTravelTime_{mn}mn"] / report["PopTotal"]
         ).round(4)
 
-    fs = filesystem(config["output-dir"])
-    fs.makedirs(config["output-dir"], exist_ok=True)
+    fs = filesystem(config["output_dir"])
+    fs.makedirs(config["output_dir"], exist_ok=True)
 
-    gpkg = os.path.join(config["output-dir"], "zonal_stats.gpkg")
+    gpkg = os.path.join(config["output_dir"], "zonal_stats.gpkg")
     with fs.open(gpkg, "wb") as f:
         report.to_file(f, driver="GPKG")
 
-    csv = os.path.join(config["output-dir"], "zonal_stats.csv")
+    csv = os.path.join(config["output_dir"], "zonal_stats.csv")
     with fs.open(csv, "wb") as f:
         report.drop(["geometry"], axis=1).to_csv(f)
 
