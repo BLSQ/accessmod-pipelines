@@ -16,10 +16,10 @@ def test_zonalstats():
 
     with tempfile.TemporaryDirectory(prefix="AccessMod_") as tmp_dir:
 
-        config["output-dir"] = tmp_dir
+        config["output_dir"] = tmp_dir
 
         # update file paths in config
-        for layer in ("travel-times", "population", "boundaries"):
+        for layer in ("travel_times", "population", "boundaries"):
             config[layer]["path"] = os.path.join(
                 data_dir, "input", config[layer]["path"]
             )

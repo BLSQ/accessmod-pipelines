@@ -1,17 +1,17 @@
 {
-    "output-dir": "",
-    "travel-times": {
+    "output_dir": "",
+    "travel_times": {
         "path": "cumulative_cost.tif"
     },
     "population": {
         "path": "population.tif",
-        "download": false
+        "auto": false
     },
     "boundaries": {
         "path": "zones.gpkg",
-        "download": false
+        "auto": false
     },
-    "time-thresholds": [
+    "time_thresholds": [
         60,
         90,
         120,
