@@ -5,12 +5,14 @@ import tempfile
 from typing import Tuple
 
 import geopandas as gpd
+import numpy as np
 import rasterio
 from osgeo import gdal
 from rasterio.crs import CRS
 from rasterio.transform import from_origin
 from rasterio.warp import aligned_target, transform_bounds, transform_geom
 from shapely.geometry import Polygon
+from utils import filesystem
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
@@ -253,3 +255,26 @@ def enforce_crs(geodataframe: gpd.GeoDataFrame, crs: CRS) -> gpd.GeoDataFrame:
         geodataframe.to_crs(crs, inplace=True)
         logger.debug("Reprojected geodataframe.")
     return geodataframe
+
+
+def get_raster_statistics(src_file: str) -> dict:
+    """Compute basic raster statistics.
+
+    This includes min, max, 1st percentile, 2nd percentile, 98th percentile, and
+    99th percentile.
+    """
+    meta = {}
+    fs = filesystem(src_file)
+    with fs.open(src_file, "rb") as f:
+        with rasterio.open(f) as src:
+            nodata = src.nodata
+            data = src.read(1)
+            meta["dtype"] = src.dtypes[0]
+            meta["nodata"] = nodata
+            meta["min"] = data[data != nodata].min()
+            meta["max"] = data[data != nodata].max()
+            for percentile in (1, 2, 98, 99):
+                meta[f"percentile_{percentile:02d}"] = np.percentile(
+                    data[data != nodata].ravel(), percentile
+                )
+    return meta
