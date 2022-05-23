@@ -18,7 +18,6 @@ https://s3-eu-west-1.amazonaws.com/vito.landcover.global/v3.0.1/2019/E000N40/E00
 
 import logging
 import os
-import tempfile
 from typing import List
 
 import click
@@ -194,20 +193,8 @@ def generate_land_cover(
         land_cover_reclass, config["land_cover"]["path"], config.get("overwrite", True)
     )
 
-    # compute cloud optimized geotiff and upload the file in same directory with
-    # a "_cog" suffix
-    with tempfile.NamedTemporaryFile(suffix=".tif") as tmp_file:
-        cog_tmp = processing.generate_cog(
-            src_file=land_cover_reclass, dst_file=tmp_file.name
-        )
-        extension = config["land_cover"]["path"].split(".")[-1]
-        cog_fpath = config["land_cover"]["path"].replace(
-            f".{extension}", f"_cog.{extension}"
-        )
-        utils.upload_file(cog_tmp, cog_fpath, config.get("overwrite", True))
-
     metadata = statistics.copy()
-    metadata.update(cog_raster_uri=cog_fpath, labels=LABELS)
+    metadata.update(labels=LABELS)
 
     utils.call_webhook(
         event_type="acquisition_completed",

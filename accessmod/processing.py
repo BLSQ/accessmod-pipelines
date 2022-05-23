@@ -9,13 +9,8 @@ import numpy as np
 import rasterio
 from osgeo import gdal
 from rasterio.crs import CRS
-from rasterio.io import MemoryFile
 from rasterio.transform import from_origin
-from rasterio.warp import Resampling, aligned_target, calculate_default_transform
-from rasterio.warp import reproject as rio_reproject
-from rasterio.warp import transform_bounds, transform_geom
-from rio_cogeo.cogeo import cog_translate
-from rio_cogeo.profiles import cog_profiles
+from rasterio.warp import aligned_target, transform_bounds, transform_geom
 from shapely.geometry import Polygon
 from utils import filesystem
 
@@ -288,69 +283,6 @@ def get_raster_statistics(src_file: str) -> dict:
                 if len(unique) <= 20:
                     meta["unique_values"] = unique
     return meta
-
-
-def generate_cog(src_file: str, dst_file: str, **options) -> str:
-    """Generate cloud optimized geotiff from source raster.
-
-    This file will be for dataviz purposes. NB: Paths must be local.
-    """
-    with rasterio.open(src_file) as src:
-
-        # reproject to epsg:4326 in memory
-        src_crs = src.crs
-        dst_crs = CRS.from_epsg(4326)
-        dst_transform, dst_width, dst_height = calculate_default_transform(
-            src_crs, dst_crs, src.width, src.height, *src.bounds
-        )
-        kwargs = src.meta.copy()
-        kwargs.update(
-            {
-                "crs": dst_crs,
-                "transform": dst_transform,
-                "width": dst_width,
-                "height": dst_height,
-            }
-        )
-        memfile = MemoryFile()
-        with memfile.open(**kwargs) as mem:
-            for i in range(1, src.count + 1):
-                rio_reproject(
-                    source=rasterio.band(src, i),
-                    destination=rasterio.band(mem, i),
-                    src_transform=src.transform,
-                    src_crs=src.crs,
-                    dst_transform=dst_transform,
-                    dst_crs=dst_crs,
-                    resampling=Resampling.nearest,
-                )
-
-        # convert to cloud-optimized geotiff
-        # set format creation options (see gdalwarp `-co` option)
-        dst_profile = cog_profiles.get("deflate")
-        dst_profile.update(dict(BIGTIFF="IF_SAFER"))
-
-        # dataset open option (see gdalwarp `-oo` option)
-        config = dict(
-            GDAL_NUM_THREADS="ALL_CPUS",
-            GDAL_TIFF_INTERNAL_MASK=True,
-            GDAL_TIFF_OVR_BLOCKSIZE="128",
-        )
-
-        with memfile.open() as src_mem:
-            cog_translate(
-                src_mem,
-                dst_file,
-                dst_profile,
-                config=config,
-                in_memory=True,
-                quiet=True,
-                use_cog_driver=True,
-                # web_optimized=True, # TODO: understand why this param hardcode epsg:3857 into the resulting file
-                **options,
-            )
-
-        return dst_file
 
 
 def generate_geojson(src_file: str, dst_file: str) -> str:
