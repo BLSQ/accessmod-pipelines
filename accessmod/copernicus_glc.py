@@ -116,11 +116,25 @@ def reproject(
         bounds=bounds,
         height=shape[0],
         width=shape[1],
-        resampling_alg="bilinear",
+        resampling_alg="mode",
     )
     processing.mask(raster_reproj_file_p1, raster_reproj_file_p2, target_geom)
     logger.info(f"Reprojected into {raster_reproj_file_p2}")
     return raster_reproj_file_p2
+
+
+def reclassify(src_file: str) -> str:
+    """Simplify labels."""
+    dst_file = src_file.replace(".tif", "_reclassified.tif")
+    with rasterio.open(src_file) as src:
+        with rasterio.open(dst_file, "w", **src.profile) as dst:
+            data = src.read(1)
+            # closed forest
+            data[(data >= 110) & (data < 120)] = 110
+            # open forest
+            data[(data >= 120) & (data < 130)] = 120
+            dst.write(data, 1)
+    return dst_file
 
 
 @click.group()
@@ -156,8 +170,9 @@ def generate_land_cover(
     land_cover_proj = reproject(
         target_geometry, land_cover, config["crs"], config["spatial_resolution"]
     )
+    land_cover_reclass = reclassify(land_cover_proj)
     utils.upload_file(
-        land_cover_proj, config["land_cover"]["path"], config["overwrite"]
+        land_cover_reclass, config["land_cover"]["path"], config["overwrite"]
     )
     utils.call_webhook(
         event_type="acquisition_completed",
