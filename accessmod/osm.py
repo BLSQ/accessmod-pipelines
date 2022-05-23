@@ -10,6 +10,7 @@ from typing import Sequence
 import click
 import fiona
 import geopandas as gpd
+import processing
 import production  # noqa
 import requests
 import utils
@@ -272,12 +273,34 @@ def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
         utils.upload_file(
             transport_file, config["transport_network"]["path"], config["overwrite"]
         )
+
+        # save a geojson copy of the dataset for dataviz purposes
+        with tempfile.NamedTemporaryFile(suffix=".geojson") as tmp_file:
+            geojson_uri = utils.fpath_suffix(
+                src_fpath=config["transport_network"]["path"],
+                suffix="web",
+                dst_extension="geojson",
+            )
+            geojson_tmp = processing.generate_geojson(transport_file, tmp_file.name)
+            utils.upload_file(geojson_tmp, geojson_uri, config.get("overwrite", True))
+
+        # columns and unique values
+        metadata = {
+            "columns": ["highway", "smoothness", "surface", "tracktype"],
+            "values": {
+                "highway": []  # todo: for now these values are hardcoded in the front-end
+            },
+            "category_column": "highway",
+            "geojson_uri": utils.fpath.suffix(config["transport_network"]["path"]),
+        }
+
         utils.call_webhook(
             event_type="acquisition_completed",
             data={
                 "acquisition_type": "transport_network",
                 "uri": config["transport_network"]["path"],
                 "mime_type": "application/geopackage+sqlite3",
+                "metadata": metadata,
             },
             url=webhook_url,
             token=webhook_token,
