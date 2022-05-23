@@ -161,7 +161,7 @@ def generate_land_cover(
 
     # download tiles
     target_geometry = utils.parse_extent(config["extent"])
-    tiles = download(target_geometry, config["land_cover"]["year"])
+    tiles = download(target_geometry, config["land_cover"].get("year", 2019))
 
     # geo stuff
     land_cover = merge_tiles(tiles)
@@ -170,7 +170,7 @@ def generate_land_cover(
     )
     land_cover_reclass = reclassify(land_cover_proj)
     utils.upload_file(
-        land_cover_reclass, config["land_cover"]["path"], config["overwrite"]
+        land_cover_reclass, config["land_cover"]["path"], config.get("overwrite", True)
     )
     utils.call_webhook(
         event_type="acquisition_completed",
