@@ -204,7 +204,7 @@ def generate_land_cover(
         cog_fpath = config["land_cover"]["path"].replace(
             f".{extension}", f"_cog.{extension}"
         )
-        utils.upload_file(land_cover_reclass, cog_fpath, config.get("overwrite", True))
+        utils.upload_file(cog_tmp, cog_fpath, config.get("overwrite", True))
 
     metadata = statistics.copy()
     metadata.update(cog_raster_uri=cog_fpath, labels=LABELS)
