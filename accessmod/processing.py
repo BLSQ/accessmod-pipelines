@@ -305,3 +305,5 @@ def generate_geojson(src_file: str, dst_file: str) -> str:
     else:
         dst_geodata = src_geodata.to_crs(DST_CRS)
         dst_geodata.to_file(dst_file, driver="GeoJSON")
+
+    return dst_file
