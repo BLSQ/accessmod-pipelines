@@ -297,3 +297,16 @@ def upload_file(src_file: str, dst_file: str, overwrite: bool):
     dst_fd = fs.open(dst_file, "wb")
     dst_fd.write(src_fd.read())
     dst_fd.close()
+
+
+def fpath_suffix(src_fpath: str, suffix: str, dst_extension: None) -> str:
+    """Add a suffix (before extension) to a remote or local file path.
+
+    Also optionally change extension of new file path.
+    """
+    src_extension = src_fpath.split(".")[-1]
+    dst_fpath = src_fpath.replace(f".{src_extension}", f"_{suffix}.{src_extension}")
+    if dst_extension:
+        if src_extension != dst_extension:
+            dst_fpath = dst_fpath.replace(src_extension, dst_extension)
+    return dst_fpath
