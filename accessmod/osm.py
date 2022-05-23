@@ -291,7 +291,7 @@ def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
                 "highway": []  # todo: for now these values are hardcoded in the front-end
             },
             "category_column": "highway",
-            "geojson_uri": utils.fpath_suffix(config["transport_network"]["path"]),
+            "geojson_uri": geojson_uri,
         }
 
         utils.call_webhook(
