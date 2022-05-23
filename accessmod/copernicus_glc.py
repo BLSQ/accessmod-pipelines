@@ -16,8 +16,6 @@ https://s3-eu-west-1.amazonaws.com/vito.landcover.global/v3.0.1/2019/E000N40/E00
 
 """
 
-import base64
-import json
 import logging
 import os
 from typing import List
@@ -156,7 +154,7 @@ def generate_land_cover(
     webhook_token: str,
 ):
     logger.info("generate_land_cover() starting")
-    config = json.loads(base64.b64decode(config))
+    config = utils.parse_config(config)
 
     # create temporary workdir, if it is not existing
     os.makedirs(WORK_DIR, exist_ok=True)
