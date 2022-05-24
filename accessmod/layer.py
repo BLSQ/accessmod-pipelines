@@ -488,7 +488,7 @@ class StackLayer(Layer):
             raise AccessModError(
                 "Stack layer does not exist and no stack priorities have been provided."
             )
-        if self.exists and not labels:
+        if self.exists and not labels and not layers:
             raise AccessModError("Missing class labels for stack layer.")
 
         self.layers = layers
