@@ -1,5 +1,3 @@
-import base64
-import json
 import logging
 import math
 import os
@@ -50,7 +48,7 @@ def download_healthsites(
     webhook_token: str,
 ):
     """Download list of health facilities for accessmod analysis"""
-    config = json.loads(base64.b64decode(config))
+    config = utils.parse_config(config)
 
     def url_builder(endpoint, filters):
         url = "https://healthsites.io/api/v2" + endpoint + "?"
