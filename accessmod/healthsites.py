@@ -8,6 +8,7 @@ import production  # noqa
 import requests
 import utils
 from appdirs import user_cache_dir
+from pyproj import CRS
 from shapely.geometry import Point
 
 logging.basicConfig(
@@ -116,6 +117,8 @@ def download_healthsites(
     if config["health_facilities"]["amenity"]:
         df = df[df.amenity == config["health_facilities"]["amenity"]]
     df = df.reset_index(drop=True)
+    df.crs = CRS.from_epsg(4326)
+    df = df.to_crs(CRS.from_epsg(config["crs"]))
 
     # upload results
     local_file = os.path.join(WORK_DIR, "facilities.gpkg")
