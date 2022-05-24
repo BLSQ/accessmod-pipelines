@@ -9,8 +9,6 @@ Notes:
    https://urs.earthdata.nasa.gov/users/new
 """
 
-import base64
-import json
 import logging
 import os
 from io import BytesIO
@@ -253,7 +251,7 @@ def compute_dem(
     webhook_token: str,
 ):
     logger.info("compute_dem() starting")
-    config = json.loads(base64.b64decode(config))
+    config = utils.parse_config(config)
 
     # create temporary workdir, if it is not existing
     os.makedirs(WORK_DIR, exist_ok=True)
