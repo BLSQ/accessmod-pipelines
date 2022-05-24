@@ -77,6 +77,13 @@ def accessibility(
     dem = ElevationLayer(filepath=config["dem"]["path"])
     logger.info(f"Using DEM from {config['dem']['path']}")
 
+    # support null stack entry in config
+    if not config.get("stack", False):
+        config["stack"] = {
+            "auto": True,
+            "path": os.path.join(output_dir, "stack.tif")
+        }
+    
     layer = config.get("stack")
 
     if not layer:
