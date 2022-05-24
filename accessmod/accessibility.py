@@ -135,15 +135,16 @@ def accessibility(
                 logger.info(f"Using water from {layer['path']}")
 
             # barriers (optional)
-            for barrier in config.get("barriers"):
-                layers.append(
-                    BarrierLayer(
-                        filepath=barrier["path"],
-                        all_touched=barrier.get("all_touched", False),
-                        name=barrier.get("name"),
+            if "barriers" in config:
+                for barrier in config.get("barriers"):
+                    layers.append(
+                        BarrierLayer(
+                            filepath=barrier["path"],
+                            all_touched=barrier.get("all_touched", False),
+                            name=barrier.get("name"),
+                        )
                     )
-                )
-                logger.info(f"Using barrier from {barrier['path']}")
+                    logger.info(f"Using barrier from {barrier['path']}")
 
             stack = StackLayer(
                 filepath=config["stack"]["path"],
