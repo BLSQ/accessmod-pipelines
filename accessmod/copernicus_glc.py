@@ -186,15 +186,9 @@ def generate_land_cover(
     )
     land_cover_reclass = reclassify(land_cover_proj)
 
-    # get raster statistics (unique values, min, max, percentiles, etc)
-    statistics = processing.get_raster_statistics(land_cover_reclass)
-
     utils.upload_file(
         land_cover_reclass, config["land_cover"]["path"], config.get("overwrite", True)
     )
-
-    metadata = statistics.copy()
-    metadata.update(labels=LABELS)
 
     utils.call_webhook(
         event_type="acquisition_completed",
@@ -202,7 +196,9 @@ def generate_land_cover(
             "acquisition_type": "land_cover",
             "uri": config["land_cover"]["path"],
             "mime_type": "image/geotiff",
-            "metadata": metadata,
+            "metadata": {
+                "labels": LABELS,
+            },
         },
         url=webhook_url,
         token=webhook_token,
