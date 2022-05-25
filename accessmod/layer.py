@@ -568,12 +568,18 @@ class StackLayer(Layer):
         # class is not available in the specified layer
         for stack_class in priorities:
             layer = self.get(stack_class["name"])
-            if (
-                layer.role.value
-                in (Role.LAND_COVER.value, Role.TRANSPORT_NETWORK.value)
-                and "class" in stack_class
-            ):
-                if stack_class["class"] not in layer.labels.values():
+
+            # which classes are available in the source file?
+            if layer.role.value == Role.LAND_COVER.value:
+                available_classes = list(layer.labels.keys())
+            elif layer.role.value == Role.TRANSPORT_NETWORK.value:
+                available_classes = list(layer.unique)
+            else:
+                continue
+
+            # remove references to classes not available in source file
+            if "class" in stack_class:
+                if stack_class["class"] not in available_classes:
                     priorities.remove(stack_class)
 
         # expand land cover and transport network class labels if needed
@@ -583,18 +589,26 @@ class StackLayer(Layer):
                 Role.LAND_COVER.value,
                 Role.TRANSPORT_NETWORK.value,
             ) and not stack_class.get("class"):
+
                 # class labels that are already present in the priorities
                 present = [
                     stack_class["class"]
                     for stack_class in priorities
                     if stack_class["name"] == layer.name and "class" in stack_class
                 ]
+
+                # class labels that are available
+                if layer.role.value == Role.LAND_COVER.value:
+                    available_classes = list(layer.labels.keys())
+                elif layer.role.value == Role.TRANSPORT_NETWORK.value:
+                    available_classes = list(layer.unique)
+                else:
+                    continue
+
                 # class labels that are missing from the priorities
-                missing = [
-                    label for label in layer.labels.values() if label not in present
-                ]
-                for label in reversed(missing):
-                    priorities.insert(i, {"name": layer.name, "class": label})
+                missing = [value for value in available_classes if value not in present]
+                for value in reversed(missing):
+                    priorities.insert(i, {"name": layer.name, "class": value})
                 priorities.remove(stack_class)
 
         return priorities
@@ -650,26 +664,28 @@ class StackLayer(Layer):
         for stack_class in reversed(self.priorities):
 
             layer = self.get(stack_class["name"])
-            label = stack_class.get("class")
+            class_id = stack_class.get("class")
             if not layer:
                 raise AccessModError(f"Layer '{layer}' not found.")
 
             if layer.role.value == Role.LAND_COVER.value:
-                class_value = layer.class_value(label)
-                stack[land_cover == class_value] = land_cover[land_cover == class_value]
-                self.labels[class_value] = label
+                stack[land_cover == int(class_id)] = land_cover[
+                    land_cover == int(class_id)
+                ]
+                self.labels[class_id] = layer.labels.get(class_id)
 
             elif layer.role.value == Role.TRANSPORT_NETWORK.value:
                 data = layer.rasterize(
-                    label,
+                    class_id,
                     self.meta.get("transform"),
                     self.meta.get("shape"),
                     self.meta.get("crs"),
                 )
                 if data is not None:
-                    class_value = layer.class_value(label) + 1000
+                    # e.g. class_value = 1001 for class_id = "primary"
+                    class_value = layer.class_value(class_id) + 1000
                     stack[data == 1] = class_value
-                    self.labels[class_value] = label
+                    self.labels[class_value] = class_id
 
             elif layer.role.value == Role.WATER.value:
                 data = layer.rasterize(

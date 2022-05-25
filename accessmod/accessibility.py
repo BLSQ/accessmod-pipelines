@@ -20,7 +20,6 @@ from layer import (
     BarrierLayer,
     ElevationLayer,
     LandCoverLayer,
-    Role,
     StackLayer,
     TransportNetworkLayer,
     WaterLayer,
@@ -55,18 +54,18 @@ DEFAULT_LANDCOVER_LABELS = {
 
 
 DEFAULT_SPEEDS = {
-    "Closed forest": 2,
-    "Open forest": 2,
-    "Shrubs": 3,
-    "Herbaceous vegetation": 3,
-    "Herbaceous wetland": 1,
-    "Moss and lichen": 3,
-    "Sparse vegetation": 3,
-    "Cropland": 3,
-    "Urban": 4,
-    "Snow": 0,
-    "Permanent water bodies": 0,
-    "Open sea": 0,
+    "110": 2,
+    "120": 2,
+    "20": 3,
+    "30": 3,
+    "90": 1,
+    "100": 3,
+    "60": 3,
+    "40": 3,
+    "50": 4,
+    "70": 0,
+    "80": 0,
+    "200": 0,
     "primary": 70,
     "primary_link": 70,
     "secondary": 50,
@@ -271,6 +270,9 @@ def accessibility(
         )
         logger.info(f"Friction surface written to {dst_file}")
 
+        # remove me
+        shutil.copyfile(dst_file, "/data/output/friction.tif")
+
         logger.info("Started cost distance analysis")
         cost, nearest = analysis.cost_distance(
             friction=friction,
@@ -364,12 +366,36 @@ class AccessibilityAnalysis:
 
         for class_value, class_label in self.stack.labels.items():
 
-            if class_label in moving_speeds:
-                class_speed = moving_speeds[class_label]
-            elif class_label in self.stack.find(Role.WATER):
+            # in the moving speeds dictionary, classes from land cover layer are
+            # referred to through their original class ID (e.g. 120, 200, etc.)
+            if class_value > 0 and class_value < 1000:
+                if str(class_value) in moving_speeds:
+                    class_speed = moving_speeds[str(class_value)]
+                # if no speed is provided for the land cover class, use a
+                # default value and raise a warning
+                else:
+                    class_speed = 2
+                    logger.warn(
+                        f"No speed provided for land cover class {class_value}:{class_label}"
+                    )
+
+            # in the moving speeds dictionary, classes from transport network
+            # layer are reffered to with their original category value (e.g.
+            # primary, secondary, residential, etc.)
+            elif class_value >= 1000 and class_value < 2000:
+                if class_label in moving_speeds:
+                    class_speed = moving_speeds[class_label]
+                else:
+                    # if no speed provided for transport network, raise a
+                    # warning and ignore
+                    logger.warn(
+                        f"No speed provided for transport network {class_label}"
+                    )
+
+            # set classes from water and barrier layers to null speed
+            elif class_value >= 2000:
                 class_speed = 0
-            elif class_label in self.stack.find(Role.BARRIER):
-                class_speed = 0
+
             else:
                 class_speed = np.nan
 
