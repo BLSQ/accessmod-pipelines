@@ -583,7 +583,10 @@ class StackLayer(Layer):
 
             # remove references to classes not available in source file
             if "class" in stack_class:
-                if stack_class["class"] not in available_classes:
+                if (
+                    stack_class.get("class")
+                    and stack_class.get("class") not in available_classes
+                ):
                     priorities.remove(stack_class)
                     logger.info(
                         f"Class {stack_class['class']} removed from priorities because it is not available in the layer."
