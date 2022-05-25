@@ -575,9 +575,15 @@ class StackLayer(Layer):
 
             # which classes are available in the source file?
             if layer.role.value == Role.LAND_COVER.value:
-                available_classes = list(layer.labels.keys())
+                available_classes = [str(v) for v in layer.unique]
+                logger.info(
+                    f"Available classes for {layer.name}: {', '.join(available_classes)}"
+                )
             elif layer.role.value == Role.TRANSPORT_NETWORK.value:
                 available_classes = list(layer.unique)
+                logger.info(
+                    f"Available classes for {layer.name}: {', '.join(available_classes)}"
+                )
             else:
                 continue
 
@@ -607,29 +613,27 @@ class StackLayer(Layer):
                         if stack_class.get("class"):
                             present.append(stack_class["class"])
 
-                # class labels that are available
-                if layer.role.value == Role.LAND_COVER.value:
-                    available_classes = [str(v) for v in layer.unique]
-                    logger.info(
-                        f"Available classes for {layer.name}: {', '.join(available_classes)}"
-                    )
-                elif layer.role.value == Role.TRANSPORT_NETWORK.value:
-                    available_classes = list(layer.unique)
-                    logger.info(
-                        f"Available classes for {layer.name}: {', '.join(available_classes)}"
-                    )
-                else:
-                    continue
-
                 # class labels that are missing from the priorities
-                missing = [value for value in available_classes if value not in present]
+                available = [str(v) for v in layer.unique]
+                missing = [value for value in available if value not in present]
                 for value in reversed(missing):
                     priorities.insert(i, {"name": layer.name, "class": value})
                     logger.info(f"Added priority for layer {layer.name} class {value}")
-                priorities.remove(stack_class)
-                logger.info(f"Removed ambiguous priority for {stack_class['name']}")
 
-        return priorities
+        # remove none land cover and transport network priorities
+        priorities_ = []
+        for stack_class in priorities:
+            layer = self.get(stack_class["name"])
+            if layer.role.value in (
+                Role.LAND_COVER.value,
+                Role.TRANSPORT_NETWORK.value,
+            ):
+                if stack_class.get("class"):
+                    priorities_.append(stack_class)
+            else:
+                priorities_.append(stack_class)
+
+        return priorities_
 
     def class_value(self, class_label: str) -> int:
         """Get class ID (i.e. pixel value) from class label.
