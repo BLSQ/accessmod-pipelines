@@ -81,9 +81,9 @@ def accessibility(
     if not config.get("stack", False):
         config["stack"] = {
             "auto": True,
-            "path": os.path.join(output_dir, "stack.tif")
+            "path": os.path.join(config["output_dir"], "stack.tif"),
         }
-    
+
     layer = config.get("stack")
 
     if not layer:
