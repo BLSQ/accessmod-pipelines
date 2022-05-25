@@ -159,7 +159,7 @@ class TransportNetworkLayer(Layer):
     def data(self):
         """Read vector data."""
         data = self.read()
-        return data[~pd.isnull(self.category_column)]
+        return data[~pd.isnull(data[self.category_column])]
 
     @cached_property
     def unique(self):
