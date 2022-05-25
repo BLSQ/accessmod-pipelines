@@ -392,6 +392,7 @@ class AccessibilityAnalysis:
                     logger.warn(
                         f"No speed provided for transport network {class_label}"
                     )
+                    continue
 
             # set classes from water and barrier layers to null speed
             elif class_value >= 2000:
