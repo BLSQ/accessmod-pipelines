@@ -565,6 +565,9 @@ class StackLayer(Layer):
         for stack_class in priorities:
             if stack_class["name"] not in self.names:
                 priorities.remove(stack_class)
+                logger.info(
+                    f"Layer {stack_class['name']} removed from priorities because it is not in the stack."
+                )
 
         # class is not available in the specified layer
         for stack_class in priorities:
@@ -582,6 +585,9 @@ class StackLayer(Layer):
             if "class" in stack_class:
                 if stack_class["class"] not in available_classes:
                     priorities.remove(stack_class)
+                    logger.info(
+                        f"Class {stack_class['class']} removed from priorities because it is not available in the layer."
+                    )
 
         # expand land cover and transport network class labels if needed
         for i, stack_class in enumerate(priorities):
@@ -610,7 +616,9 @@ class StackLayer(Layer):
                 missing = [value for value in available_classes if value not in present]
                 for value in reversed(missing):
                     priorities.insert(i, {"name": layer.name, "class": value})
+                    logger.info(f"Added priority for layer {layer.name} class {value}")
                 priorities.remove(stack_class)
+                logger.info(f"Removed ambiguous priority for {stack_class['name']}")
 
         return priorities
 
