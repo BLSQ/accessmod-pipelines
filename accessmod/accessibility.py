@@ -367,6 +367,8 @@ class AccessibilityAnalysis:
 
         for class_value, class_label in self.stack.labels.items():
 
+            class_value = int(class_value)
+
             # in the moving speeds dictionary, classes from land cover layer are
             # referred to through their original class ID (e.g. 120, 200, etc.)
             if class_value > 0 and class_value < 1000:
