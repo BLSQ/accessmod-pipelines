@@ -283,7 +283,7 @@ def accessibility(
         logger.info(f"Travel times written into {config['output_dir']}")
 
         friction_uri = os.path.join(config["output_dir"], "friction.tif")
-        upload_file(friction, friction_uri)
+        upload_file(friction, friction_uri, overwrite=True)
 
     if webhook_url and webhook_token:
         status_update(
