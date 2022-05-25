@@ -54,6 +54,36 @@ DEFAULT_LANDCOVER_LABELS = {
 }
 
 
+DEFAULT_SPEEDS = {
+    "Closed forest": 2,
+    "Open forest": 2,
+    "Shrubs": 3,
+    "Herbaceous vegetation": 3,
+    "Herbaceous wetland": 1,
+    "Moss and lichen": 3,
+    "Sparse vegetation": 3,
+    "Cropland": 3,
+    "Urban": 4,
+    "Snow": 0,
+    "Permanent water bodies": 0,
+    "Open sea": 0,
+    "primary": 70,
+    "primary_link": 70,
+    "secondary": 50,
+    "secondary_link": 50,
+    "tertiary": 30,
+    "tertiary_link": 30,
+    "trunk": 60,
+    "trunk_link": 60,
+    "unclassified": 15,
+    "residential": 15,
+    "living_street": 10,
+    "service": 10,
+    "track": 10,
+    "path": 10,
+}
+
+
 @click.group()
 def cli():
     pass
@@ -114,6 +144,18 @@ def accessibility(
                 "auto"
             ):
                 config["land_cover"]["labels"] = DEFAULT_LANDCOVER_LABELS
+
+    # set default moving speeds
+    if not config.get("moving_speeds"):
+        # transport_network and land_cover are enabled
+        if config.get("transport_network") and config.get("land_cover"):
+            # and both layers are set to "auto"
+            if config["transport_network"].get("auto") and config["land_cover"].get(
+                "auto"
+            ):
+                # we already know the labels in that case so we can set default speeds
+                # if they have not been provided by the user
+                config["moving_speeds"] = DEFAULT_SPEEDS
 
     layer = config.get("stack")
 
