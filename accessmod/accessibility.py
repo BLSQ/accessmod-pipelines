@@ -38,6 +38,21 @@ logger = logging.getLogger(__name__)
 APP_NAME = "AccessMod"
 APP_AUTHOR = "Bluesquare"
 
+DEFAULT_LANDCOVER_LABELS = {
+    "110": "Closed forest",
+    "120": "Open forest",
+    "20": "Shrubs",
+    "30": "Herbaceous vegetation",
+    "90": "Herbaceous wetland",
+    "100": "Moss and lichen",
+    "60": "Sparse vegetation",
+    "40": "Cropland",
+    "50": "Urban",
+    "70": "Snow",
+    "80": "Permanent water bodies",
+    "200": "Open sea",
+}
+
 
 @click.group()
 def cli():
@@ -83,6 +98,18 @@ def accessibility(
             "auto": True,
             "path": os.path.join(config["output_dir"], "stack.tif"),
         }
+
+    # set default category column for transport network layer
+    if "transport_network" in config:
+        if config["transport_network"]:
+            if not config["transport_network"]["category_column"]:
+                config["transport_network"]["category_column"] = "highway"
+
+    # set default land cover labels
+    if "land_cover" in config:
+        if config["land_cover"]:
+            if not config["land_cover"]["labels"]:
+                config["land_cover"]["labels"] = DEFAULT_LANDCOVER_LABELS
 
     layer = config.get("stack")
 
