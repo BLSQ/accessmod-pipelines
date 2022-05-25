@@ -270,9 +270,6 @@ def accessibility(
         )
         logger.info(f"Friction surface written to {dst_file}")
 
-        # remove me
-        shutil.copyfile(dst_file, "/data/output/friction.tif")
-
         logger.info("Started cost distance analysis")
         cost, nearest = analysis.cost_distance(
             friction=friction,
