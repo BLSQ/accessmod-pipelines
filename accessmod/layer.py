@@ -598,11 +598,11 @@ class StackLayer(Layer):
             ) and not stack_class.get("class"):
 
                 # class labels that are already present in the priorities
-                present = [
-                    stack_class["class"]
-                    for stack_class in priorities
-                    if stack_class["name"] == layer.name and "class" in stack_class
-                ]
+                present = []
+                for stack_class in priorities:
+                    if stack_class["name"] == layer.name and "class" in stack_class:
+                        if stack_class.get("class"):
+                            present.append(stack_class["class"])
 
                 # class labels that are available
                 if layer.role.value == Role.LAND_COVER.value:
