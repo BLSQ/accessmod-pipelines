@@ -102,13 +102,17 @@ def accessibility(
     # set default category column for transport network layer
     if "transport_network" in config:
         if config["transport_network"]:
-            if not config["transport_network"]["category_column"]:
+            if not config["transport_network"].get("category_column") and config[
+                "transport_network"
+            ].get("auto"):
                 config["transport_network"]["category_column"] = "highway"
 
     # set default land cover labels
     if "land_cover" in config:
         if config["land_cover"]:
-            if not config["land_cover"]["labels"]:
+            if not config["land_cover"].get("labels") and config["land_cover"].get(
+                "auto"
+            ):
                 config["land_cover"]["labels"] = DEFAULT_LANDCOVER_LABELS
 
     layer = config.get("stack")
