@@ -609,9 +609,15 @@ class StackLayer(Layer):
 
                 # class labels that are available
                 if layer.role.value == Role.LAND_COVER.value:
-                    available_classes = list(layer.labels.keys())
+                    available_classes = [str(v) for v in layer.unique]
+                    logger.info(
+                        f"Available classes for {layer.name}: {', '.join(available_classes)}"
+                    )
                 elif layer.role.value == Role.TRANSPORT_NETWORK.value:
                     available_classes = list(layer.unique)
+                    logger.info(
+                        f"Available classes for {layer.name}: {', '.join(available_classes)}"
+                    )
                 else:
                     continue
 
