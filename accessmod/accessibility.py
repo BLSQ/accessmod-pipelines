@@ -24,7 +24,7 @@ from layer import (
     TransportNetworkLayer,
     WaterLayer,
 )
-from utils import filesystem, parse_config, random_string, status_update
+from utils import filesystem, parse_config, random_string, status_update, upload_file
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
@@ -282,6 +282,9 @@ def accessibility(
         )
         logger.info(f"Travel times written into {config['output_dir']}")
 
+        friction_uri = os.path.join(config["output_dir"], "friction.tif")
+        upload_file(friction, friction_uri)
+
     if webhook_url and webhook_token:
         status_update(
             status="SUCCESS",
@@ -290,6 +293,7 @@ def accessibility(
                     "travel_times": cost,
                     "stack": stack.filepath,
                     "stack_labels": json.dumps(stack.labels),
+                    "friction_surface": friction_uri,
                 }
             },
             url=webhook_url,
