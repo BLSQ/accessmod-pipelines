@@ -46,7 +46,8 @@ def cli():
 def zonalstats(config: str, webhook_url: str, webhook_token: str):
     """Compute zonal statistics."""
 
-    status_update(status="RUNNING", data={}, url=webhook_url, token=webhook_token)
+    if webhook_url and webhook_token:
+        status_update(status="RUNNING", data={}, url=webhook_url, token=webhook_token)
 
     config = parse_config(config)
 
@@ -82,7 +83,7 @@ def zonalstats(config: str, webhook_url: str, webhook_token: str):
     if webhook_url and webhook_token:
         status_update(
             status="SUCCESS",
-            data={"outputs": {"zonal_stats_gpkg": gpkg, "zonal_stats_csv": csv}},
+            data={"outputs": {"zonal_statistics_geo": gpkg, "zonal_statistics_table": csv}},
             url=webhook_url,
             token=webhook_token,
         )

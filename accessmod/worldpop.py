@@ -82,7 +82,7 @@ def build_url(
 
 def download_raster(
     country: str,
-    output_dir: str,
+    output_path: str,
     year: int = 2020,
     un_adj: bool = True,
     constrained: bool = True,
@@ -105,8 +105,8 @@ def download_raster(
     ----------
     country : str
         ISO A3 country code.
-    output_dir : str
-        Path to output directory.
+    output_path : str
+        Path to output file.
     year : int, optional
         Year of interest (default=2020).
     un_adj : bool, optional
@@ -141,11 +141,12 @@ def download_raster(
     url = build_url(country=country, year=year, un_adj=un_adj, constrained=constrained)
     logger.info(f"WorldPop URL: {url}.")
 
-    fp = os.path.join(output_dir, url.split("/")[-1])
+    fp = output_path
     fs = filesystem(fp)
-    fs.makedirs(output_dir, exist_ok=True)
     if fs.exists(fp) and not overwrite:
         raise FileExistsError(f"File {fp} already exists.")
+    output_dir = os.path.dirname(output_path)
+    fs.makedirs(output_dir, exist_ok=True)
 
     tmp_name = "/tmp/wp_" + str(monotonic()).replace(".", "")
     with s.get(url, stream=True, timeout=timeout) as r:
@@ -175,34 +176,24 @@ def cli():
 
 
 @cli.command()
-@click.option("--country", type=str, required=True, help="country code")
-@click.option("--year", type=int, required=True, default=2020, help="year of interest")
+@click.option("--config", type=str, required=True, help="pipeline configuration")
 @click.option(
-    "--constrained/--unconstrained",
-    is_flag=True,
-    default=True,
-    help="constrained vs. unconstrained",
+    "--webhook-url",
+    type=str,
+    help="URL to push a POST request with the acquisition's results",
 )
-@click.option(
-    "--un-adj/--no-adj",
-    is_flag=True,
-    default=True,
-    help="UN-adjusted population counts",
-)
-@click.option("--resolution", type=int, default=100, help="spatial resolution (m)")
-@click.option("--output-dir", type=str, required=True, help="output data directory")
-@click.option(
-    "--overwrite", is_flag=True, default=False, help="overwrite existing files"
-)
-def download(
-    country: str,
-    year: int,
-    constrained: bool,
-    un_adj: bool,
-    resolution: int,
-    output_dir: str,
-    overwrite: bool,
-):
+@click.option("--webhook-token", type=str, help="Token to use in the webhook POST")
+
+def download(config: str, webhook_url: str, webhook_token: str):
+    config = utils.parse_config(config)
+    country = config["country"]
+    year = config["year"]
+    resolution = config["population"].get("resolution", 100)
+    un_adj = config["population"].get("adjusted", True)
+    constrained = config["population"].get("constrained", True)
+    output_path = config["population"]["path"]
+    overwrite = config.get("overwrite", False)
+
     """Download WorldPop population dataset."""
     if not utils.country_is_valid(country):
         raise ValueError(f"{country} is not a valid country code.")
@@ -227,7 +218,7 @@ def download(
 
     download_raster(
         country=country,
-        output_dir=output_dir,
+        output_path=output_path,
         year=year,
         un_adj=un_adj,
         constrained=constrained,
