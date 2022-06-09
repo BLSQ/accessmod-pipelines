@@ -98,17 +98,20 @@ class Layer:
                 meta["shape"] = (meta["height"], meta["width"])
         return meta
 
+    @property
+    def extension(self):
+        """Get file extension from file path."""
+        return self.filepath.split(".")[-1]
+
     def read(self) -> Union[np.ndarray, pd.DataFrame, gpd.GeoDataFrame]:
         """Read raster, vector or tabular data."""
         if not self.exists():
             raise FileNotFoundError(f"File {self.filepath} does not exist.")
 
         if self.format == Format.VECTOR:
-            extension = self.filepath.split(".")[-1]
-            with tempfile.NamedTemporaryFile(suffix=extension) as tmp:
-                with self.fs.open(self.filepath) as f:
-                    tmp.write(f.read())
-                return gpd.read_file(tmp.name)
+            with tempfile.NamedTemporaryFile(suffix=f".{self.extension}") as f:
+                self.fs.get(self.filepath, f.name)
+                return gpd.read_file(f.name)
 
         with self.fs.open(self.filepath, "rb") as f:
 
@@ -326,8 +329,9 @@ class BarrierLayer(Layer):
         """Read vector layer."""
         if not self.exists():
             raise FileNotFoundError(f"File {self.filepath} does not exist.")
-        with self.fs.open(self.filepath) as f:
-            return gpd.read_file(f)
+        with tempfile.NamedTemporaryFile(suffix=f".{self.extension}") as f:
+            self.fs.get(self.filepath, f.name)
+            return gpd.read_file(f.name)
 
     def rasterize(
         self,
@@ -388,8 +392,9 @@ class WaterLayer(Layer):
         """Read vector layer."""
         if not self.exists():
             raise FileNotFoundError(f"File {self.filepath} does not exist.")
-        with self.fs.open(self.filepath) as f:
-            return gpd.read_file(f)
+        with tempfile.NamedTemporaryFile(suffix=f".{self.extension}") as f:
+            self.fs.get(self.filepath, f.name)
+            return gpd.read_file(f.name)
 
     def rasterize(
         self,
@@ -777,8 +782,9 @@ class HealthFacilitiesLayer(Layer):
         """Read vector layer."""
         if not self.exists():
             raise FileNotFoundError(f"File {self.filepath} does not exist.")
-        with self.fs.open(self.filepath) as f:
-            return gpd.read_file(f)
+        with tempfile.NamedTemporaryFile(suffix=f".{self.extension}") as f:
+            self.fs.get(self.filepath, f.name)
+            return gpd.read_file(f.name)
 
 
 class TravelTimesLayer(Layer):
@@ -827,8 +833,9 @@ class BoundariesLayer(Layer):
         """Read vector layer."""
         if not self.exists():
             raise FileNotFoundError(f"File {self.filepath} does not exist.")
-        with self.fs.open(self.filepath) as f:
-            return gpd.read_file(f)
+        with tempfile.NamedTemporaryFile(suffix=f".{self.extension}") as f:
+            self.fs.get(self.filepath, f.name)
+            return gpd.read_file(f.name)
 
 
 class PopulationLayer(Layer):
