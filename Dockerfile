@@ -24,23 +24,12 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY docker-entrypoint.sh \
-  processing.py \
-  utils.py \
-  srtm.py \
-  srtm2.py \
-  srtm30m_bounding_boxes.json \
-  worldpop.py \
-  countries.csv \
-  production.py \
-  accessibility.py \
-  grasshelper.py \
-  osm.py \
-  healthsites.py \
-  copernicus_glc.py \
-  cgls_bounding_boxes.json \
-  countries_pbf.json \
-  errors.py \
-  layer.py \
+  accessmod/*.py \
+  accessmod/srtm30m_bounding_boxes.json \
+  accessmod/countries.csv \
+  accessmod/cgls_bounding_boxes.json \
+  accessmod/countries_pbf.json \
+  accessmod/tests/data/Zonal_Stats_Sample_Data/boundaries.gpkg \
   /app/
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]

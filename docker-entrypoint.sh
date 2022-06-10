@@ -42,6 +42,12 @@ case "$command" in
 "accessibility")
   python3 -m accessibility $arguments
   ;;
+"boundaries")
+  python3 -m boundaries $arguments
+  ;;
+"zonalstats")
+  python3 -m zonalstats $arguments
+  ;;
 "test")
   pytest -s $arguments
   ;;
