@@ -183,10 +183,9 @@ def cli():
     help="URL to push a POST request with the acquisition's results",
 )
 @click.option("--webhook-token", type=str, help="Token to use in the webhook POST")
-
 def download(config: str, webhook_url: str, webhook_token: str):
     config = utils.parse_config(config)
-    country = config["country"]
+    country = config["country"]["iso-a3"]
     year = config["year"]
     resolution = config["population"].get("resolution", 100)
     un_adj = config["population"].get("adjusted", True)
