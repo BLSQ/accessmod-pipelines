@@ -307,3 +307,15 @@ def generate_geojson(src_file: str, dst_file: str) -> str:
         dst_geodata.to_file(dst_file, driver="GeoJSON")
 
     return dst_file
+
+
+def reproject_vector(src_file: str, dst_file: str, src_crs: CRS, dst_crs: CRS) -> str:
+    """Reproject a vector file with GDAL.
+
+    NB: Paths must be local.
+    """
+    options = gdal.VectorTranslateOptions(
+        srcSRS=src_crs.to_string(), dstSRS=dst_crs.to_string()
+    )
+    gdal.VectorTranslate(dst_file, src_file, options=options)
+    return dst_file
