@@ -207,8 +207,8 @@ def reproject(
         dst_crs=dst_crs,
         dtype="int16",
         bounds=bounds,
-        height=shape[0],
-        width=shape[1],
+        xres=resolution,
+        yres=-resolution,
         resampling_alg="bilinear",
     )
     processing.mask(raster_reproj_file_p1, raster_reproj_file_p2, target_geom)
