@@ -1,3 +1,4 @@
+import os
 import tempfile
 
 import responses
@@ -31,9 +32,11 @@ def test_download_raster():
     with tempfile.TemporaryDirectory(prefix="AccessMod_") as tmp_dir:
         worldpop.download_raster(
             country="dji",
-            output_dir=tmp_dir,
+            output_path=os.path.join(tmp_dir, "worldpop.tif"),
             year=2020,
             un_adj=True,
             constrained=True,
             resolution=100,
+            timeout=30,
+            overwrite=False,
         )
