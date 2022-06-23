@@ -15,6 +15,7 @@ import production  # noqa
 import requests
 import utils
 from appdirs import user_cache_dir
+from pyproj import CRS
 from shapely.geometry import Polygon, shape
 
 logging.basicConfig(
@@ -250,10 +251,11 @@ def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
 
     if config["transport_network"]["auto"]:
         logger.info("extract_from_osm() transport_network")
-        transport_file = os.path.join(WORK_DIR, "transport.gpkg")
+        transport_fp = os.path.join(WORK_DIR, "transport_latlon.gpkg")
+        transport_reproj_fp = os.path.join(WORK_DIR, "transport.gpkg")
         extract_pbf(
             list(countries.localpath),
-            transport_file,
+            transport_fp,
             target_geometry,
             ["w/highway", "w/route=ferry"],
             [
@@ -270,8 +272,20 @@ def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
                 "foot",
             ],
         )
+
+        src_crs = CRS.from_epsg(4326)
+        dst_crs = CRS.from_epsg(config.get("crs"))
+        processing.reproject_vector(
+            src_file=transport_fp,
+            dst_file=transport_reproj_fp,
+            src_crs=src_crs.to_string(),
+            dst_crs=dst_crs.to_string(),
+        )
+
         utils.upload_file(
-            transport_file, config["transport_network"]["path"], config["overwrite"]
+            transport_reproj_fp,
+            config["transport_network"]["path"],
+            config["overwrite"],
         )
 
         # save a geojson copy of the dataset for dataviz purposes
@@ -281,7 +295,9 @@ def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
                 suffix="web",
                 dst_extension="geojson",
             )
-            geojson_tmp = processing.generate_geojson(transport_file, tmp_file.name)
+            geojson_tmp = processing.generate_geojson(
+                transport_reproj_fp, tmp_file.name
+            )
             utils.upload_file(geojson_tmp, geojson_uri, config.get("overwrite", True))
 
         # columns and unique values
@@ -308,15 +324,26 @@ def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
 
     if config["water"]["auto"]:
         logger.info("extract_from_osm() water")
-        water_file = os.path.join(WORK_DIR, "water.gpkg")
+        water_fp = os.path.join(WORK_DIR, "water_latlon.gpkg")
+        water_reproj_fp = os.path.join(WORK_DIR, "water.gpkg")
         extract_pbf(
             list(countries.localpath),
-            water_file,
+            water_fp,
             target_geometry,
             ["nwr/natural=water", "nwr/waterway", "nwr/water"],
             ["waterway", "natural", "water", "wetland", "boat"],
         )
-        utils.upload_file(water_file, config["water"]["path"], config["overwrite"])
+
+        src_crs = CRS.from_epsg(4326)
+        dst_crs = CRS.from_epsg(config.get("crs"))
+        processing.reproject_vector(
+            src_file=water_fp,
+            dst_file=water_reproj_fp,
+            src_crs=src_crs.to_string(),
+            dst_crs=dst_crs.to_string(),
+        )
+
+        utils.upload_file(water_reproj_fp, config["water"]["path"], config["overwrite"])
         utils.call_webhook(
             event_type="acquisition_completed",
             data={
