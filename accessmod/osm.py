@@ -278,8 +278,8 @@ def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
         processing.reproject_vector(
             src_file=transport_fp,
             dst_file=transport_reproj_fp,
-            src_crs=src_crs.to_string(),
-            dst_crs=dst_crs.to_string(),
+            src_crs=src_crs,
+            dst_crs=dst_crs,
         )
 
         utils.upload_file(
