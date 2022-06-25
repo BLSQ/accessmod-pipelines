@@ -13,6 +13,7 @@ import fsspec
 import pandas as pd
 import requests
 from appdirs import user_cache_dir
+from google.oauth2.credentials import Credentials
 from shapely.geometry import Polygon, shape
 
 logging.basicConfig(
@@ -207,19 +208,22 @@ def filesystem(target_path: str, cache: bool = False) -> fsspec.AbstractFileSyst
     if target_protocol not in ("file", "s3", "gcs"):
         raise ValueError(f"Protocol {target_protocol} not supported.")
 
-    client_kwargs = {}
+    kwargs = {}
     if target_protocol == "s3":
-        client_kwargs = {"endpoint_url": os.environ.get("AWS_S3_ENDPOINT")}
+        kwargs = { "client_kwargs": {"endpoint_url": os.environ.get("AWS_S3_ENDPOINT")} }
+    elif target_protocol == "gcs":
+        GCS_credentials = Credentials(token=os.environ.get("GCS_TOKEN"))
+        kwargs = { "token":  GCS_credentials }
 
     if cache:
         return fsspec.filesystem(
             protocol="filecache",
             target_protocol=target_protocol,
-            target_options={"client_kwargs": client_kwargs},
+            target_options=kwargs,
             cache_storage=user_cache_dir(appname=APP_NAME, appauthor=APP_AUTHOR),
         )
     else:
-        return fsspec.filesystem(protocol=target_protocol, client_kwargs=client_kwargs)
+        return fsspec.filesystem(protocol=target_protocol, **kwargs)
 
 
 def random_string(length=16):
