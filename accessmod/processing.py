@@ -205,6 +205,8 @@ def mask(src_raster: str, dst_raster: str, geom: Polygon, src_crs: CRS = None):
     # Reproject input geometry to same CRS as raster if needed
     with rasterio.open(src_raster) as src:
         dst_crs = src.crs
+        xres = src.transform.a
+        yres = src.transform.e
     if src_crs:
         geom = transform_geom(src_crs, dst_crs, geom)
         logger.info(
@@ -222,6 +224,8 @@ def mask(src_raster: str, dst_raster: str, geom: Polygon, src_crs: CRS = None):
             cutlineDSName=geom_fp,
             cropToCutline=False,
             creationOptions=GDAL_CREATION_OPTIONS,
+            xRes=xres,
+            yRes=yres,
         )
 
         gdal.Warp(dst_raster, src_raster, options=options)
