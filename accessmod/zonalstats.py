@@ -83,7 +83,9 @@ def zonalstats(config: str, webhook_url: str, webhook_token: str):
     if webhook_url and webhook_token:
         status_update(
             status="SUCCESS",
-            data={"outputs": {"zonal_statistics_geo": gpkg, "zonal_statistics_table": csv}},
+            data={
+                "outputs": {"zonal_statistics_geo": gpkg, "zonal_statistics_table": csv}
+            },
             url=webhook_url,
             token=webhook_token,
         )
@@ -176,7 +178,7 @@ def time_stats(
             ppp,
             affine=population.meta["transform"],
             stats=["sum"],
-            nodata=-1,
+            nodata=population.meta["nodata"],
         )
         metrics[lvl] = pd.Series(
             data=[stat["sum"] for stat in stats], index=areas.index
