@@ -78,7 +78,7 @@ def zonalstats(config: str, webhook_url: str, webhook_token: str):
 
     csv = os.path.join(config["output_dir"], "zonal_stats.csv")
     with fs.open(csv, "wb") as f:
-        report.drop(["geometry"], axis=1).to_csv(f)
+        report.drop(["geometry"], axis=1).to_csv(f, index=False)
 
     if webhook_url and webhook_token:
         status_update(
