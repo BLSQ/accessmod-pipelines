@@ -57,6 +57,7 @@
             12.712
         ]
     ],
+    "crs": 6933,
     "transport_network": {
         "auto": true,
         "path": "transport_network.gpkg"
