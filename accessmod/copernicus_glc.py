@@ -176,7 +176,7 @@ def generate_land_cover(
     os.makedirs(WORK_DIR, exist_ok=True)
 
     # download tiles
-    target_geometry = utils.parse_extent(config["extent"])
+    target_geometry = utils.parse_extent(config["extent"], config["crs"])
     tiles = download(target_geometry, config["land_cover"].get("year", 2019))
 
     # geo stuff

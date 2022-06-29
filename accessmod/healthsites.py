@@ -59,7 +59,7 @@ def download_healthsites(
     logger.info("Test token and download facilities list")
     os.makedirs(WORK_DIR, exist_ok=True)
 
-    target_geometry = utils.parse_extent(config["extent"])
+    target_geometry = utils.parse_extent(config["extent"], config["crs"])
     str_bounds = ",".join([str(x) for x in target_geometry.bounds])
 
     r = requests.get(

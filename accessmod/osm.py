@@ -232,7 +232,7 @@ def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
 
     os.makedirs(WORK_DIR, exist_ok=True)
 
-    target_geometry = utils.parse_extent(config["extent"])
+    target_geometry = utils.parse_extent(config["extent"], config["crs"])
     all_countries = gpd.read_file("countries_pbf.json")
     all_countries["localpath"] = ""
     all_countries["localpbf"] = all_countries["pbf"].apply(

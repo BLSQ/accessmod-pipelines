@@ -257,7 +257,7 @@ def compute_dem(
     os.makedirs(WORK_DIR, exist_ok=True)
 
     # download tiles
-    target_geometry = utils.parse_extent(config["extent"])
+    target_geometry = utils.parse_extent(config["extent"], config["crs"])
     # if you don't have access to blsq SRTM mirror: use download_src
     # tiles = download_src(target_geometry, username, password)
     tiles = download_mirror(target_geometry)

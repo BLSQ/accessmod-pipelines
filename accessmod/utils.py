@@ -7,12 +7,13 @@ import string
 import uuid
 import zipfile
 from datetime import datetime
-from typing import List
+from typing import Any, List
 
 import fsspec
 import pandas as pd
 import requests
 from appdirs import user_cache_dir
+from fiona.transform import transform_geom
 from google.oauth2.credentials import Credentials
 from shapely.geometry import Polygon, shape
 
@@ -43,8 +44,51 @@ def country_is_valid(country_code: str) -> bool:
     return country_code.upper() in countries["ISO-A3"].values
 
 
-def parse_extent(extent) -> Polygon:
-    return Polygon(extent)
+def _flatten(iterable: Any) -> List:
+    """Flatten a list or tuple of any depth."""
+    if isinstance(iterable, list) or isinstance(iterable, tuple):
+        return [value for i in iterable for value in _flatten(i)]
+    else:
+        return [iterable]
+
+
+def is_latlon(coordinates: List) -> bool:
+    """Check if geom coordinates seem to be in lat/lon.
+
+    This is only based on min/max coordinates values for now.
+    """
+    xy = _flatten(coordinates)
+    return min(xy) >= -180 and max(xy) <= 180
+
+
+def parse_extent(extent: List, epsg: int) -> Polygon:
+    """Convert extent from config into a shapely polygon.
+
+    NB: extent is expected to be in WGS84 coordinate reference system, so if
+    needed coordinates are reprojected to lat/lon based on the epsg parameter.
+    Epsg parameter is ignored if the extent is detected as being in lat/lon.
+
+    Parameters
+    ----------
+    extent : list
+        Polygon coordinates.
+    epsg : int
+        EPSG code of the extent. Ignore if extent is detected as being in
+        lat/lon coordinates.
+
+    Return
+    ------
+    shapely polygon
+        Extent geometry.
+    """
+    if is_latlon(extent):
+        return Polygon(extent)
+    else:
+        geom = Polygon(extent)
+        geom_latlon = transform_geom(
+            f"EPSG:{epsg}", "EPSG:4326", geom.__geo_interface__
+        )
+        return shape(geom_latlon)
 
 
 def country_geometry(country_code: str, use_cache=True) -> Polygon:
@@ -142,11 +186,6 @@ def unzip(
     return [os.path.join(dst_dir, fn) for fn in filenames]
 
 
-def _flatten(src_list: list) -> list:
-    """Flatten a list of lists."""
-    return [item for sublist in src_list for item in sublist]
-
-
 def unzip_all(src_dir, dst_dir: str = None, remove_archive: bool = False) -> str:
     """Unzip all zip archives in a directory.
 
@@ -210,10 +249,10 @@ def filesystem(target_path: str, cache: bool = False) -> fsspec.AbstractFileSyst
 
     kwargs = {}
     if target_protocol == "s3":
-        kwargs = { "client_kwargs": {"endpoint_url": os.environ.get("AWS_S3_ENDPOINT")} }
+        kwargs = {"client_kwargs": {"endpoint_url": os.environ.get("AWS_S3_ENDPOINT")}}
     elif target_protocol == "gcs":
         GCS_credentials = Credentials(token=os.environ.get("GCS_TOKEN"))
-        kwargs = { "token":  GCS_credentials }
+        kwargs = {"token": GCS_credentials}
 
     if cache:
         return fsspec.filesystem(
