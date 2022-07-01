@@ -518,7 +518,7 @@ class AccessibilityAnalysis:
 
         with rasterio.open(tmp_friction) as src:
             src_crs = src.crs
-            xres = src.tansform.a
+            xres = src.transform.a
 
         grasshelper.setup_environment(grass_datadir, src_crs)
         grasshelper.grass_execute("r.in.gdal", input=tmp_friction, output="friction")
