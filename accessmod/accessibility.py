@@ -1,6 +1,5 @@
 """Accessibility analysis pipeline."""
 
-import json
 import logging
 import os
 import shutil
@@ -292,7 +291,7 @@ def accessibility(
                 "outputs": {
                     "travel_times": cost,
                     "stack": stack.filepath,
-                    "stack_labels": json.dumps(stack.labels),
+                    "stack_labels": stack.labels,
                     "friction_surface": friction_uri,
                 }
             },
