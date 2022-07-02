@@ -161,7 +161,7 @@ def cli():
 def download(config: str, webhook_url: str, webhook_token: str):
     config = utils.parse_config(config)
     country = config["country"]["iso-a3"]
-    year = config["year"]
+    year = config.get("year", 2020)
     resolution = config["population"].get("resolution", 100)
     un_adj = config["population"].get("adjusted", True)
     constrained = config["population"].get("constrained", True)
