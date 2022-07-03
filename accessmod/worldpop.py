@@ -190,7 +190,7 @@ def download(config: str, webhook_url: str, webhook_token: str):
     if (resolution not in (100, 1000)) or (resolution == 1000 and constrained):
         raise ValueError(f"Spatial resolution of {resolution} m is not available.")
 
-    download_raster(
+    remote_path = download_raster(
         country=country,
         output_path=output_path,
         year=year,
@@ -199,6 +199,17 @@ def download(config: str, webhook_url: str, webhook_token: str):
         resolution=resolution,
         timeout=30,
         overwrite=overwrite,
+    )
+
+    utils.call_webhook(
+        event_type="acquisition_completed",
+        data={
+            "acquisition_type": "population",
+            "uri": remote_path,
+            "mime_type": "image/geotiff",
+        },
+        url=webhook_url,
+        token=webhook_token,
     )
 
 
