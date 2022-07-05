@@ -63,7 +63,10 @@ SRC_DIR = os.path.dirname(__file__)
 WORK_DIR = os.path.join(user_cache_dir("accessmod"), "CGLS")
 
 # cache folder containing the tiles
-TILE_PATH = "s3://hexa-demo-accessmod/CGLS-tiles/"
+TILE_PATH = os.environ.get(
+    "ACCESSMOD_BUCKET_NAME",
+    "s3://hexa-demo-accessmod/CGLS-tiles/",
+)
 
 
 def download(target_geom: BaseGeometry, year: int) -> List[str]:
