@@ -322,38 +322,41 @@ def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
             token=webhook_token,
         )
 
-    if config["water"]["auto"]:
-        logger.info("extract_from_osm() water")
-        water_fp = os.path.join(WORK_DIR, "water_latlon.gpkg")
-        water_reproj_fp = os.path.join(WORK_DIR, "water.gpkg")
-        extract_pbf(
-            list(countries.localpath),
-            water_fp,
-            target_geometry,
-            ["nwr/natural=water", "nwr/waterway", "nwr/water"],
-            ["waterway", "natural", "water", "wetland", "boat"],
-        )
+    if config.get("water"):
+        if config["water"].get("auto"):
+            logger.info("extract_from_osm() water")
+            water_fp = os.path.join(WORK_DIR, "water_latlon.gpkg")
+            water_reproj_fp = os.path.join(WORK_DIR, "water.gpkg")
+            extract_pbf(
+                list(countries.localpath),
+                water_fp,
+                target_geometry,
+                ["nwr/natural=water", "nwr/waterway", "nwr/water"],
+                ["waterway", "natural", "water", "wetland", "boat"],
+            )
 
-        src_crs = CRS.from_epsg(4326)
-        dst_crs = CRS.from_epsg(config.get("crs"))
-        processing.reproject_vector(
-            src_file=water_fp,
-            dst_file=water_reproj_fp,
-            src_crs=src_crs,
-            dst_crs=dst_crs,
-        )
+            src_crs = CRS.from_epsg(4326)
+            dst_crs = CRS.from_epsg(config.get("crs"))
+            processing.reproject_vector(
+                src_file=water_fp,
+                dst_file=water_reproj_fp,
+                src_crs=src_crs,
+                dst_crs=dst_crs,
+            )
 
-        utils.upload_file(water_reproj_fp, config["water"]["path"], config["overwrite"])
-        utils.call_webhook(
-            event_type="acquisition_completed",
-            data={
-                "acquisition_type": "water",
-                "uri": config["water"]["path"],
-                "mime_type": "application/geopackage+sqlite3",
-            },
-            url=webhook_url,
-            token=webhook_token,
-        )
+            utils.upload_file(
+                water_reproj_fp, config["water"]["path"], config["overwrite"]
+            )
+            utils.call_webhook(
+                event_type="acquisition_completed",
+                data={
+                    "acquisition_type": "water",
+                    "uri": config["water"]["path"],
+                    "mime_type": "application/geopackage+sqlite3",
+                },
+                url=webhook_url,
+                token=webhook_token,
+            )
     logger.info("extract_from_osm() finished")
 
 
