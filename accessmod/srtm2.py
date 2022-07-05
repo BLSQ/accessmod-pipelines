@@ -65,7 +65,10 @@ RETRY_ADAPTER = HTTPAdapter(
 )
 
 # mirror for SRTM tiles
-TILE_PATH = "s3://hexa-demo-accessmod/SRTM-tiles/"
+TILE_PATH = os.environ.get(
+    "ACCESSMOD_BUCKET_NAME",
+    "s3://hexa-demo-accessmod/SRTM-tiles/",
+)
 
 
 def download_src(target_geom: BaseGeometry, username: str, password: str) -> List[str]:
