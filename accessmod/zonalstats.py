@@ -179,6 +179,7 @@ def time_stats(
     for lvl in levels:
         ppp = ppp_src.copy()
         ppp[time > lvl] = 0
+        ppp[time < 0] = 0
         stats = zonal_stats(
             shapes,
             ppp,
