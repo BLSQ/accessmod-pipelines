@@ -56,14 +56,21 @@ def zonalstats(config: str, webhook_url: str, webhook_token: str):
     travel_times = TravelTimesLayer(filepath=config["travel_times"]["path"])
 
     pop = population_counts(boundaries, population)
+    pop = pop.rename("PopTotal").round()
+    pop.fillna(0, inplace=True)
+
     time_thresholds = [int(threshold) for threshold in config["time_thresholds"]]
     pop_time = time_stats(travel_times, boundaries, population, levels=time_thresholds)
 
     report = boundaries.read().copy()
-    report = report.join(pop.rename("PopTotal").round().astype(int))
+    report = report.join(pop)
 
     for mn, count in pop_time.items():
-        report = report.join(count.rename(f"PopTravelTime_{mn}mn").round().astype(int))
+
+        count = count.rename(f"PopTravelTime_{mn}mn")
+        count = count.round()
+        count = count.fillna(0)
+        report = report.join(count)
         report[f"PopCoveredRatio_{mn}mn"] = (
             report[f"PopTravelTime_{mn}mn"] / report["PopTotal"]
         ).round(4)
