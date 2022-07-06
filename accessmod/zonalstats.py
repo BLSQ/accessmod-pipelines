@@ -56,9 +56,8 @@ def zonalstats(config: str, webhook_url: str, webhook_token: str):
     travel_times = TravelTimesLayer(filepath=config["travel_times"]["path"])
 
     pop = population_counts(boundaries, population)
-    pop_time = time_stats(
-        travel_times, boundaries, population, levels=config["time_thresholds"]
-    )
+    time_thresholds = [int(threshold) for threshold in config["time_thresholds"]]
+    pop_time = time_stats(travel_times, boundaries, population, levels=time_thresholds)
 
     report = boundaries.read().copy()
     report = report.join(pop.rename("PopTotal").round().astype(int))
