@@ -632,7 +632,7 @@ class StackLayer(Layer):
                 if moving_speeds:
                     speeds = [moving_speeds.get(value, 0) for value in missing]
                     missing_ = [class_ for _, class_ in sorted(zip(speeds, missing))]
-                    missing = reversed(missing_)
+                    missing = list(reversed(missing_))
 
                 for value in reversed(missing):
                     priorities.insert(i, {"name": layer.name, "class": value})
