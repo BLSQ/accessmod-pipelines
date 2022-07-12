@@ -445,6 +445,7 @@ class StackLayer(Layer):
         layers: List[Layer] = None,
         priorities: List[dict] = None,
         labels: Dict[int, str] = None,
+        moving_speeds: Dict[str, float] = None,
         name: str = "stack",
         **kwargs,
     ):
@@ -476,6 +477,9 @@ class StackLayer(Layer):
         labels : dict, optional
             Class labels of the provided stack layer. Not required if the stack
             layer is initialized from existing layers.
+        moving_speeds : dict, optional
+            Moving speeds associated with each class in the stack. Used to setup
+            default priorities between roads (higher speed = higher priority).
         """
         super().__init__(
             filepath=filepath,
@@ -498,7 +502,7 @@ class StackLayer(Layer):
             raise AccessModError("Missing class labels for stack layer.")
 
         self.layers = layers
-        self.priorities = self.expand_priorities(priorities)
+        self.priorities = self.expand_priorities(priorities, moving_speeds)
         if labels:
             self.labels = {int(v): label for v, label in labels.items()}
         else:
@@ -558,7 +562,9 @@ class StackLayer(Layer):
                 return layer
         return None
 
-    def expand_priorities(self, priorities: List[dict]) -> List[dict]:
+    def expand_priorities(
+        self, priorities: List[dict], moving_speeds: Dict[str, float] = None
+    ) -> List[dict]:
         """Expand class priorities dictionary.
 
         If an element of the priorities list refers to the land cover or
@@ -621,6 +627,13 @@ class StackLayer(Layer):
                 # class labels that are missing from the priorities
                 available = [str(v) for v in layer.unique]
                 missing = [value for value in available if value not in present]
+
+                # order by speed (higher speed = higher priority)
+                if moving_speeds:
+                    speeds = [moving_speeds.get(value, 0) for value in missing]
+                    missing_ = [class_ for _, class_ in sorted(zip(speeds, missing))]
+                    missing = reversed(missing_)
+
                 for value in reversed(missing):
                     priorities.insert(i, {"name": layer.name, "class": value})
                     logger.info(f"Added priority for layer {layer.name} class {value}")

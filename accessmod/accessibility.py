@@ -228,6 +228,7 @@ def accessibility(
                 filepath=config["stack"]["path"],
                 layers=layers,
                 priorities=config["priorities"],
+                moving_speeds=config["moving_speeds"],
             )
             logger.info(f"Generated stack from {len(layers)} layers")
 
