@@ -630,7 +630,7 @@ class StackLayer(Layer):
 
                 # order by speed (higher speed = higher priority)
                 if moving_speeds:
-                    speeds = [moving_speeds.get(value, 0) for value in missing]
+                    speeds = [float(moving_speeds.get(value, 0)) for value in missing]
                     missing_ = [class_ for _, class_ in sorted(zip(speeds, missing))]
                     missing = list(reversed(missing_))
 
