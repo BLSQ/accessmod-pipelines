@@ -626,7 +626,7 @@ class StackLayer(Layer):
 
                 # class labels that are missing from the priorities
                 available = [str(v) for v in layer.unique]
-                missing = [value for value in available if value not in present]
+                missing = [str(value) for value in available if value not in present]
 
                 # order by speed (higher speed = higher priority)
                 if moving_speeds:
