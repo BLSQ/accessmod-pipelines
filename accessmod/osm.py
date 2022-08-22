@@ -245,7 +245,7 @@ def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
         localpath = os.path.join(WORK_DIR, country["localpbf"])
         countries.loc[i, "localpath"] = localpath
         url = "http://download.geofabrik.de/" + country["pbf"]
-        with requests.get(url, stream=True) as r:
+        with requests.get(url, stream=True, timeout=30) as r:
             r.raise_for_status()
             with open(localpath, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=8192):
