@@ -239,14 +239,17 @@ def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
         lambda p: p.replace("/", "-")
     )
 
-    logger.info("extract_from_osm() download source data")
     countries = all_countries[all_countries.intersects(target_geometry)]
+    logger.info("extract_from_osm() download %i source data", len(countries))
     for i, country in countries.iterrows():
         localpath = os.path.join(WORK_DIR, country["localpbf"])
         countries.loc[i, "localpath"] = localpath
-        r = requests.get("http://download.geofabrik.de/" + country["pbf"])
-        r.raise_for_status()
-        open(localpath, "wb").write(r.content)
+        url = "http://download.geofabrik.de/" + country["pbf"]
+        with requests.get(url, stream=True, timeout=30) as r:
+            r.raise_for_status()
+            with open(localpath, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
         logger.info("Downloaded %s to %s", country["pbf"], localpath)
 
     if config["transport_network"]["auto"]:
