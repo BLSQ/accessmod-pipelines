@@ -708,6 +708,9 @@ class StackLayer(Layer):
             if not layer:
                 raise AccessModError(f"Layer '{layer}' not found.")
 
+            if isinstance(class_id, str):
+                class_id = float(class_id)
+
             if layer.role.value == Role.LAND_COVER.value:
                 stack[land_cover == int(class_id)] = land_cover[
                     land_cover == int(class_id)
