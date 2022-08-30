@@ -523,7 +523,7 @@ class AccessibilityAnalysis:
 
         grasshelper.setup_environment(grass_datadir, src_crs)
         grasshelper.grass_execute("r.in.gdal", input=tmp_friction, output="friction")
-        grasshelper.grass_execute("g.region", flags="a", raster="friction", res=xres)
+        grasshelper.grass_execute("g.region", raster="friction", align="friction")
         grasshelper.grass_execute("v.in.ogr", input=tmp_targets, output="targets")
 
         logger.info("Loaded input data into GRASS environment")
