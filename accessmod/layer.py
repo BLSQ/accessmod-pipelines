@@ -708,10 +708,14 @@ class StackLayer(Layer):
             if not layer:
                 raise AccessModError(f"Layer '{layer}' not found.")
 
-            if isinstance(class_id, str):
-                class_id = float(class_id)
-
             if layer.role.value == Role.LAND_COVER.value:
+
+                # fix `ValueError: invalid literal for int() with base 10` in
+                # case the front-end provides a decimal number as a class id
+                # (e.g. "1.0" instead of "1")
+                if isinstance(class_id, str):
+                    class_id = float(class_id)
+
                 stack[land_cover == int(class_id)] = land_cover[
                     land_cover == int(class_id)
                 ]
