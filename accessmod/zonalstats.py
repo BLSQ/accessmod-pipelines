@@ -37,17 +37,15 @@ def cli():
     required=True,
     help="analysis config as a b64 encoded json string",
 )
-@click.option(
-    "--webhook-url",
-    type=str,
-    help="URL to push a POST request with the analysis' results",
-)
-@click.option("--webhook-token", type=str, help="token to use in the webhook POST")
-def zonalstats(config: str, webhook_url: str, webhook_token: str):
+def zonalstats(config: str):
     """Compute zonal statistics."""
 
-    if webhook_url and webhook_token:
-        status_update(status="RUNNING", data={}, url=webhook_url, token=webhook_token)
+    status_update(
+        status="RUNNING",
+        data={},
+        url=os.environ.get("HEXA_WEBHOOK_URL"),
+        token=os.environ.get("HEXA_WEBHOOK_TOKEN"),
+    )
 
     config = parse_config(config)
 
@@ -86,15 +84,12 @@ def zonalstats(config: str, webhook_url: str, webhook_token: str):
     with fs.open(csv, "wb") as f:
         report.drop(["geometry"], axis=1).to_csv(f, index=False)
 
-    if webhook_url and webhook_token:
-        status_update(
-            status="SUCCESS",
-            data={
-                "outputs": {"zonal_statistics_geo": gpkg, "zonal_statistics_table": csv}
-            },
-            url=webhook_url,
-            token=webhook_token,
-        )
+    status_update(
+        status="SUCCESS",
+        data={"outputs": {"zonal_statistics_geo": gpkg, "zonal_statistics_table": csv}},
+        url=os.environ.get("HEXA_WEBHOOK_URL"),
+        token=os.environ.get("HEXA_WEBHOOK_TOKEN"),
+    )
 
 
 def population_counts(

@@ -152,13 +152,7 @@ def cli():
 
 @cli.command()
 @click.option("--config", type=str, required=True, help="pipeline configuration")
-@click.option(
-    "--webhook-url",
-    type=str,
-    help="URL to push a POST request with the acquisition's results",
-)
-@click.option("--webhook-token", type=str, help="Token to use in the webhook POST")
-def download(config: str, webhook_url: str, webhook_token: str):
+def download(config: str):
     config = utils.parse_config(config)
     country = config["country"]["iso-a3"]
     year = config.get("year", 2020)
@@ -208,8 +202,8 @@ def download(config: str, webhook_url: str, webhook_token: str):
             "uri": remote_path,
             "mime_type": "image/geotiff",
         },
-        url=webhook_url,
-        token=webhook_token,
+        url=os.environ.get("HEXA_WEBHOOK_URL"),
+        token=os.environ.get("HEXA_WEBHOOK_TOKEN"),
     )
 
 

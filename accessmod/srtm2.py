@@ -240,18 +240,10 @@ def cli():
     help="earthdata password",
 )
 @click.option("--config", type=str, required=True, help="pipeline configuration")
-@click.option(
-    "--webhook-url",
-    type=str,
-    help="URL to push a POST request with the acquisition's results",
-)
-@click.option("--webhook-token", type=str, help="Token to use in the webhook POST")
 def compute_dem(
     username: str,
     password: str,
     config: str,
-    webhook_url: str,
-    webhook_token: str,
 ):
     logger.info("compute_dem() starting")
     config = utils.parse_config(config)
@@ -278,8 +270,8 @@ def compute_dem(
             "uri": config["dem"]["path"],
             "mime_type": "image/geotiff",
         },
-        url=webhook_url,
-        token=webhook_token,
+        url=os.environ.get("HEXA_WEBHOOK_URL"),
+        token=os.environ.get("HEXA_WEBHOOK_TOKEN"),
     )
 
     logger.info("compute_dem() finished")

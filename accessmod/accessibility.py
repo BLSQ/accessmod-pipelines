@@ -94,24 +94,14 @@ def cli():
     required=True,
     help="analysis config as a b64 encoded json string",
 )
-@click.option(
-    "--webhook-url",
-    type=str,
-    help="URL to push a POST request with the analysis' results",
-)
-@click.option("--webhook-token", type=str, help="token to use in the webhook POST")
-def accessibility(
-    config: str,
-    webhook_url: str,
-    webhook_token: str,
-):
+def accessibility(config: str):
     """Perform an accessibility analysis."""
 
     status_update(
         status="RUNNING",
         data={},
-        url=webhook_url,
-        token=webhook_token,
+        url=os.environ.get("HEXA_WEBHOOK_URL"),
+        token=os.environ.get("HEXA_WEBHOOK_TOKEN"),
     )
 
     config = parse_config(config)
@@ -285,20 +275,19 @@ def accessibility(
         friction_uri = os.path.join(config["output_dir"], "friction.tif")
         upload_file(friction, friction_uri, overwrite=True)
 
-    if webhook_url and webhook_token:
-        status_update(
-            status="SUCCESS",
-            data={
-                "outputs": {
-                    "travel_times": cost,
-                    "stack": stack.filepath,
-                    "stack_labels": stack.labels,
-                    "friction_surface": friction_uri,
-                }
-            },
-            url=webhook_url,
-            token=webhook_token,
-        )
+    status_update(
+        status="SUCCESS",
+        data={
+            "outputs": {
+                "travel_times": cost,
+                "stack": stack.filepath,
+                "stack_labels": stack.labels,
+                "friction_surface": friction_uri,
+            }
+        },
+        url=os.environ.get("HEXA_WEBHOOK_URL"),
+        token=os.environ.get("HEXA_WEBHOOK_TOKEN"),
+    )
 
 
 class CostDistanceAlgorithm(Enum):

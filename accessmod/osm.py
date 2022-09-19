@@ -211,13 +211,7 @@ def cli():
 
 @cli.command()
 @click.option("--config", type=str, required=True, help="pipeline configuration")
-@click.option(
-    "--webhook-url",
-    type=str,
-    help="URL to push a POST request with the acquisition's results",
-)
-@click.option("--webhook-token", type=str, help="Token to use in the webhook POST")
-def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
+def extract_from_osm(config: str):
     """Download and extract transport network and water data from OpenStreetMap."""
     logger.info("extract_from_osm() make work dir")
 
@@ -247,7 +241,7 @@ def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
         url = "http://download.geofabrik.de/" + country["pbf"]
         with requests.get(url, stream=True, timeout=30) as r:
             r.raise_for_status()
-            with open(localpath, 'wb') as f:
+            with open(localpath, "wb") as f:
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
         logger.info("Downloaded %s to %s", country["pbf"], localpath)
@@ -321,8 +315,8 @@ def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
                 "mime_type": "application/geopackage+sqlite3",
                 "metadata": metadata,
             },
-            url=webhook_url,
-            token=webhook_token,
+            url=os.environ.get("HEXA_WEBHOOK_URL"),
+            token=os.environ.get("HEXA_WEBHOOK_TOKEN"),
         )
 
     if config.get("water"):
@@ -357,8 +351,8 @@ def extract_from_osm(config: str, webhook_url: str, webhook_token: str):
                     "uri": config["water"]["path"],
                     "mime_type": "application/geopackage+sqlite3",
                 },
-                url=webhook_url,
-                token=webhook_token,
+                url=os.environ.get("HEXA_WEBHOOK_URL"),
+                token=os.environ.get("HEXA_WEBHOOK_TOKEN"),
             )
     logger.info("extract_from_osm() finished")
 
