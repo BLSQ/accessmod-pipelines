@@ -26,6 +26,8 @@ RUN pip install -r requirements.txt
 COPY docker-entrypoint.sh \
   accessmod/*.py \
   accessmod/srtm30m_bounding_boxes.json \
+  accessmod/osmconf.ini \
+  accessmod/geofabrik.json \
   accessmod/countries.csv \
   accessmod/cgls_bounding_boxes.json \
   accessmod/countries_pbf.json \
