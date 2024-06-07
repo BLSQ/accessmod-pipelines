@@ -226,55 +226,49 @@ def extract_from_osm(config: str):
 
     os.makedirs(WORK_DIR, exist_ok=True)
 
-    country = config["country"]["iso-a3"]
-    with open("geofabrik.json") as f:
-        geofabrik = json.load(f)
+    target_geometry = utils.parse_extent(config["extent"], config["crs"])
+    all_countries = gpd.read_file("countries_pbf.json")
+    all_countries["localpath"] = ""
+    all_countries["localpbf"] = all_countries["pbf"].apply(
+        lambda p: p.replace("/", "-")
+    )
 
-    fp = os.path.join(WORK_DIR, f"{country}.osm.pbf")
-    uid = geofabrik[country]
-    url = f"https://download.geofabrik.de/{uid}-latest-free.shp.zip"
-    with requests.get(url, stream=True, timeout=30) as r:
-        r.raise_for_status()
-        with open(fp, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
-    logger.info("Downloaded %s", fp)
+    countries = all_countries[all_countries.intersects(target_geometry)]
+    logger.info("extract_from_osm() download %i source data", len(countries))
+    for i, country in countries.iterrows():
+        localpath = os.path.join(WORK_DIR, country["localpbf"])
+        countries.loc[i, "localpath"] = localpath
+        url = "http://download.geofabrik.de/" + country["pbf"]
+        with requests.get(url, stream=True, timeout=30) as r:
+            r.raise_for_status()
+            with open(localpath, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+        logger.info("Downloaded %s to %s", country["pbf"], localpath)
 
     if config["transport_network"]["auto"]:
         logger.info("extract_from_osm() transport_network")
         transport_fp = os.path.join(WORK_DIR, "transport_latlon.gpkg")
         transport_reproj_fp = os.path.join(WORK_DIR, "transport.gpkg")
-
-        QUERY = "select coalesce(highway,route) as highway, geometry from lines where highway='primary' OR highway='primary_link' OR highway='secondary' OR highway='secondary_link' OR highway='tertiary' OR highway='tertiary_link' OR highway='trunk' OR highway='trunk_link' OR highway='unclassified' OR highway='residential' OR highway='living_street' OR highway='service' OR highway='track' OR highway='path' OR route='ferry'"
-
-        cmd = [
-            "ogr2ogr",
-            "-f",
-            "gpkg",
-            "-dialect",
-            "SQLITE",
-            "-sql",
-            QUERY,
-            "-simplify",
-            "0.001",
+        extract_pbf(
+            list(countries.localpath),
             transport_fp,
-            fp,
-            "--config",
-            "OSM_CONFIG_FILE",
-            "osmconf.ini"
-        ]
-
-        r = subprocess.run(
-            cmd,
-            check=True,
-            text=True,
-            capture_output=True,
+            target_geometry,
+            ["w/highway", "w/route=ferry"],
+            [
+                "highway",
+                "smoothness",
+                "surface",
+                "tracktype",
+                "route",
+                "duration",
+                "motor_vehicle",
+                "motorcar",
+                "motorcycle",
+                "bicycle",
+                "foot",
+            ],
         )
-        logger.info(" ".join(cmd))
-        for line in r.stdout.split("\n"):
-            # if it's here, process finished OK
-            if line:
-                logger.info(line)
 
         src_crs = CRS.from_epsg(4326)
         dst_crs = CRS.from_epsg(config.get("crs"))
@@ -305,7 +299,7 @@ def extract_from_osm(config: str):
 
         # columns and unique values
         metadata = {
-            "columns": ["highway"],
+            "columns": ["highway", "smoothness", "surface", "tracktype"],
             "values": {
                 "highway": []  # todo: for now these values are hardcoded in the front-end
             },
@@ -330,35 +324,13 @@ def extract_from_osm(config: str):
             logger.info("extract_from_osm() water")
             water_fp = os.path.join(WORK_DIR, "water_latlon.gpkg")
             water_reproj_fp = os.path.join(WORK_DIR, "water.gpkg")
-
-            QUERY = "select * from lines where waterway='river'"
-
-            cmd = [
-                "ogr2ogr",
-                "-f",
-                "gpkg",
-                "-dialect",
-                "SQLITE",
-                "-sql",
-                QUERY,
+            extract_pbf(
+                list(countries.localpath),
                 water_fp,
-                fp,
-                "--config",
-                "OSM_CONFIG_FILE",
-                "osmconf.ini"
-            ]
-
-            r = subprocess.run(
-                cmd,
-                check=True,
-                text=True,
-                capture_output=True,
+                target_geometry,
+                ["nwr/natural=water", "nwr/waterway", "nwr/water"],
+                ["waterway", "natural", "water", "wetland", "boat"],
             )
-            logger.info(" ".join(cmd))
-            for line in r.stdout.split("\n"):
-                # if it's here, process finished OK
-                if line:
-                    logger.info(line)
 
             src_crs = CRS.from_epsg(4326)
             dst_crs = CRS.from_epsg(config.get("crs"))
